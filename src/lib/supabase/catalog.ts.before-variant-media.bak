@@ -1,0 +1,735 @@
+import { supabase } from "@/lib/supabase/client";
+
+import type { Brand } from "@/types/brand";
+import type { Category } from "@/types/category";
+import type {
+  Product,
+  ProductCategory,
+  ProductVariant,
+  TrainingGoal,
+} from "@/types/product";
+
+const PRODUCT_IMAGES_BUCKET = "product-images";
+
+type BrandRow = {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string | null;
+};
+
+type CategoryRow = {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string | null;
+};
+
+type CatalogBrandRow = {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string | null;
+  logo_path: string | null;
+  active: boolean;
+  sort_order: number;
+};
+
+type CatalogCategoryRow = {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string | null;
+  description_ar: string | null;
+  image_path: string | null;
+  active: boolean;
+  sort_order: number;
+};
+
+type VariantRow = {
+  id: string;
+  sku: string;
+  flavor_ar: string | null;
+  flavor_en: string | null;
+  weight_value: number | null;
+  weight_unit: string | null;
+  size_label_ar: string | null;
+  size_label_en: string | null;
+  servings: number | null;
+  price: number;
+  compare_at_price: number | null;
+  stock_quantity: number;
+  active: boolean;
+  sort_order: number;
+};
+
+type ImageRow = {
+  id: string;
+  variant_id: string | null;
+  storage_path: string | null;
+  external_url: string | null;
+  alt_text_ar: string | null;
+  alt_text_en: string | null;
+  sort_order: number;
+  is_primary: boolean;
+};
+
+type SupabaseProductRow = {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string | null;
+  short_description_ar: string | null;
+  full_description_ar: string | null;
+  product_type: string | null;
+  training_goal: string | null;
+  highlights: unknown;
+  badge_label_ar: string | null;
+  featured: boolean;
+  status: string;
+
+  brand: BrandRow | null;
+  category: CategoryRow | null;
+
+  variants: VariantRow[];
+  images: ImageRow[];
+};
+
+const productSelect = `
+  id,
+  slug,
+  name_ar,
+  name_en,
+  short_description_ar,
+  full_description_ar,
+  product_type,
+  training_goal,
+  highlights,
+  badge_label_ar,
+  featured,
+  status,
+
+  brand:brands (
+    id,
+    slug,
+    name_ar,
+    name_en
+  ),
+
+  category:categories (
+    id,
+    slug,
+    name_ar,
+    name_en
+  ),
+
+  variants:product_variants (
+    id,
+    sku,
+    flavor_ar,
+    flavor_en,
+    weight_value,
+    weight_unit,
+    size_label_ar,
+    size_label_en,
+    servings,
+    price,
+    compare_at_price,
+    stock_quantity,
+    active,
+    sort_order
+  ),
+
+  images:product_images (
+    id,
+    variant_id,
+    storage_path,
+    external_url,
+    alt_text_ar,
+    alt_text_en,
+    sort_order,
+    is_primary
+  )
+`;
+
+function mapCategory(
+  slug: string | undefined,
+): ProductCategory {
+  switch (slug) {
+    case "protein":
+      return "بروتين";
+
+    case "pre-workout":
+      return "قبل التمرين";
+
+    case "creatine":
+      return "كرياتين";
+
+    case "amino-acids":
+    case "bcaa":
+      return "أحماض أمينية";
+
+    case "fitness-accessories":
+    case "accessories":
+      return "إكسسوارات اللياقة";
+
+    default:
+      return "بروتين";
+  }
+}
+
+function mapTrainingGoal(
+  goal: string | null,
+): TrainingGoal {
+  switch (goal) {
+    case "muscle-support":
+    case "muscle-building":
+      return "بناء العضلات";
+
+    case "energy-endurance":
+    case "energy":
+      return "الطاقة والتحمل";
+
+    case "weight-management":
+      return "إدارة الوزن";
+
+    case "recovery":
+      return "الاستشفاء";
+
+    default:
+      return "بناء العضلات";
+  }
+}
+
+function mapProductType(
+  type: string | null,
+): string {
+  switch (type) {
+    case "whey-protein":
+      return "واي بروتين";
+
+    case "creatine":
+      return "كرياتين";
+
+    case "pre-workout":
+      return "Pre-Workout";
+
+    case "bcaa":
+      return "BCAA";
+
+    case "fitness-accessory":
+      return "إكسسوار رياضي";
+
+    default:
+      return type ?? "مكمل غذائي";
+  }
+}
+
+function getStorageUrl(
+  path: string | null,
+): string | null {
+  if (!path) {
+    return null;
+  }
+
+  if (
+    path.startsWith("https://") ||
+    path.startsWith("http://") ||
+    path.startsWith("/")
+  ) {
+    return path;
+  }
+
+  const { data } = supabase.storage
+    .from(PRODUCT_IMAGES_BUCKET)
+    .getPublicUrl(path);
+
+  return data.publicUrl;
+}
+
+function getImageUrl(
+  image: ImageRow,
+): string | null {
+  if (image.external_url) {
+    return image.external_url;
+  }
+
+  return getStorageUrl(
+    image.storage_path,
+  );
+}
+
+function getCategoryFallbackImage(
+  slug: string,
+): string {
+  switch (slug) {
+    case "protein":
+      return "/images/cat-protein.jpg";
+
+    case "pre-workout":
+      return "/images/cat-preworkout.jpg";
+
+    case "creatine":
+      return "/images/product-creatine.jpg";
+
+    case "amino-acids":
+    case "bcaa":
+      return "/images/product-bcaa.jpg";
+
+    case "fitness-accessories":
+    case "accessories":
+      return "/images/cat-accessories.jpg";
+
+    default:
+      return "/images/cat-protein.jpg";
+  }
+}
+
+function formatWeight(
+  variant: VariantRow,
+): string {
+  if (variant.size_label_ar) {
+    return variant.size_label_ar;
+  }
+
+  if (
+    variant.weight_value === null ||
+    !variant.weight_unit
+  ) {
+    return "";
+  }
+
+  const unitLabels: Record<
+    string,
+    string
+  > = {
+    g: "جم",
+    kg: "كجم",
+    ml: "مل",
+    l: "لتر",
+    capsule: "كبسولة",
+    tablet: "قرص",
+    piece: "قطعة",
+  };
+
+  const unit =
+    unitLabels[
+      variant.weight_unit
+    ] ?? variant.weight_unit;
+
+  return `${Number(
+    variant.weight_value,
+  )} ${unit}`;
+}
+
+function uniqueImages(
+  images: string[],
+): string[] {
+  return [...new Set(images)];
+}
+
+function mapProduct(
+  row: SupabaseProductRow,
+): Product {
+  const sortedImages = [
+    ...(row.images ?? []),
+  ].sort(
+    (a, b) =>
+      a.sort_order -
+      b.sort_order,
+  );
+
+  const globalImages =
+    sortedImages
+      .filter(
+        (image) =>
+          image.variant_id ===
+          null,
+      )
+      .map(getImageUrl)
+      .filter(
+        (
+          url,
+        ): url is string =>
+          Boolean(url),
+      );
+
+  const allImageUrls =
+    sortedImages
+      .map(getImageUrl)
+      .filter(
+        (
+          url,
+        ): url is string =>
+          Boolean(url),
+      );
+
+  const productImages =
+    globalImages.length > 0
+      ? uniqueImages(
+          globalImages,
+        )
+      : uniqueImages(
+          allImageUrls,
+        );
+
+  const variants: ProductVariant[] =
+    [...(row.variants ?? [])]
+      .filter(
+        (variant) =>
+          variant.active,
+      )
+      .sort(
+        (a, b) =>
+          a.sort_order -
+          b.sort_order,
+      )
+      .map((variant) => {
+        const specificImages =
+          sortedImages
+            .filter(
+              (image) =>
+                image.variant_id ===
+                variant.id,
+            )
+            .map(getImageUrl)
+            .filter(
+              (
+                url,
+              ): url is string =>
+                Boolean(url),
+            );
+
+        return {
+          id:
+            variant.id,
+
+          flavor:
+            variant.flavor_ar ??
+            variant.size_label_ar ??
+            "الخيار الافتراضي",
+
+          weight:
+            formatWeight(
+              variant,
+            ),
+
+          servings:
+            variant.servings ??
+            0,
+
+          price:
+            Number(
+              variant.price,
+            ),
+
+          compareAtPrice:
+            variant.compare_at_price !==
+            null
+              ? Number(
+                  variant.compare_at_price,
+                )
+              : undefined,
+
+          stock:
+            variant.stock_quantity,
+
+          images:
+            uniqueImages([
+              ...specificImages,
+              ...productImages,
+            ]),
+        };
+      });
+
+  const highlights =
+    Array.isArray(
+      row.highlights,
+    )
+      ? row.highlights.filter(
+          (
+            item,
+          ): item is string =>
+            typeof item ===
+            "string",
+        )
+      : [];
+
+  return {
+    id:
+      row.id,
+
+    slug:
+      row.slug,
+
+    brand:
+      row.brand?.name_ar ??
+      "",
+
+    name:
+      row.name_ar,
+
+    shortName:
+      row.name_ar,
+
+    description:
+      row.short_description_ar ??
+      row.full_description_ar ??
+      "",
+
+    category:
+      mapCategory(
+        row.category?.slug,
+      ),
+
+    goal:
+      mapTrainingGoal(
+        row.training_goal,
+      ),
+
+    rating:
+      0,
+
+    reviewCount:
+      0,
+
+    images:
+      productImages,
+
+    badge:
+      row.badge_label_ar ??
+      undefined,
+
+    inStock:
+      variants.some(
+        (variant) =>
+          variant.stock > 0,
+      ),
+
+    type:
+      mapProductType(
+        row.product_type,
+      ),
+
+    features:
+      highlights,
+
+    variants,
+  };
+}
+
+export async function getProductBySlug(
+  slug: string,
+): Promise<Product | null> {
+  const { data, error } =
+    await supabase
+      .from("products")
+      .select(productSelect)
+      .eq(
+        "slug",
+        slug,
+      )
+      .eq(
+        "status",
+        "active",
+      )
+      .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Failed to fetch product:",
+      error,
+    );
+
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return mapProduct(
+    data as unknown as SupabaseProductRow,
+  );
+}
+
+export async function getProducts(): Promise<
+  Product[]
+> {
+  const { data, error } =
+    await supabase
+      .from("products")
+      .select(productSelect)
+      .eq(
+        "status",
+        "active",
+      )
+      .order(
+        "featured",
+        {
+          ascending: false,
+        },
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        },
+      );
+
+  if (error) {
+    console.error(
+      "Failed to fetch products:",
+      error,
+    );
+
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) =>
+      mapProduct(
+        row as unknown as SupabaseProductRow,
+      ),
+    )
+    .filter(
+      (product) =>
+        product.variants.length >
+        0,
+    );
+}
+
+export async function getBrands(): Promise<
+  Brand[]
+> {
+  const { data, error } =
+    await supabase
+      .from("brands")
+      .select(`
+        id,
+        slug,
+        name_ar,
+        name_en,
+        logo_path,
+        active,
+        sort_order
+      `)
+      .eq(
+        "active",
+        true,
+      )
+      .order(
+        "sort_order",
+        {
+          ascending: true,
+        },
+      )
+      .order(
+        "name_ar",
+        {
+          ascending: true,
+        },
+      );
+
+  if (error) {
+    console.error(
+      "Failed to fetch brands:",
+      error,
+    );
+
+    throw error;
+  }
+
+  return (data ?? []).map(
+    (row) => {
+      const brand =
+        row as CatalogBrandRow;
+
+      return {
+        id:
+          brand.id,
+
+        name:
+          brand.name_en ??
+          brand.name_ar,
+      };
+    },
+  );
+}
+
+export async function getCategories(): Promise<
+  Category[]
+> {
+  const { data, error } =
+    await supabase
+      .from("categories")
+      .select(`
+        id,
+        slug,
+        name_ar,
+        name_en,
+        description_ar,
+        image_path,
+        active,
+        sort_order
+      `)
+      .eq(
+        "active",
+        true,
+      )
+      .order(
+        "sort_order",
+        {
+          ascending: true,
+        },
+      )
+      .order(
+        "name_ar",
+        {
+          ascending: true,
+        },
+      );
+
+  if (error) {
+    console.error(
+      "Failed to fetch categories:",
+      error,
+    );
+
+    throw error;
+  }
+
+  return (data ?? []).map(
+    (row) => {
+      const category =
+        row as CatalogCategoryRow;
+
+      const filterCategory =
+        mapCategory(
+          category.slug,
+        );
+
+      return {
+        name:
+          category.name_ar,
+
+        description:
+          category.description_ar ??
+          "تصفح منتجات هذه الفئة",
+
+        image:
+          getStorageUrl(
+            category.image_path,
+          ) ??
+          getCategoryFallbackImage(
+            category.slug,
+          ),
+
+        href:
+          `/shop?category=${encodeURIComponent(
+            filterCategory,
+          )}`,
+      };
+    },
+  );
+}
