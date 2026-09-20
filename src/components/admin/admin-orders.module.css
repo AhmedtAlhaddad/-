@@ -1,0 +1,340 @@
+.statsValue {
+  font-size: 22px !important;
+}
+
+.statusPending,
+.statusConfirmed,
+.statusPreparing,
+.statusDelivered,
+.statusCancelled,
+.contextBadge {
+  min-height: 27px;
+  padding: 0 9px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.statusPending {
+  color: #e5c27c;
+  border: 1px solid rgba(229, 194, 124, 0.16);
+  background: rgba(229, 194, 124, 0.06);
+}
+
+.statusConfirmed {
+  color: #8ec8ff;
+  border: 1px solid rgba(84, 163, 236, 0.17);
+  background: rgba(84, 163, 236, 0.06);
+}
+
+.statusPreparing {
+  color: #d4a7ff;
+  border: 1px solid rgba(178, 113, 236, 0.17);
+  background: rgba(178, 113, 236, 0.06);
+}
+
+.statusDelivered {
+  color: #55e5ae;
+  border: 1px solid rgba(34, 207, 145, 0.18);
+  background: rgba(34, 207, 145, 0.07);
+}
+
+.statusCancelled {
+  color: #a1aca8;
+  border: 1px solid rgba(161, 172, 168, 0.12);
+  background: rgba(161, 172, 168, 0.05);
+}
+
+.contextBadge {
+  color: #98a59f;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.totalBadge {
+  color: #55e5ae !important;
+  font-weight: 900;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.panel {
+  padding: 15px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.018);
+  display: grid;
+  gap: 11px;
+}
+
+.panelTitle {
+  color: #eaf3ef;
+  font-size: 12px;
+}
+
+.dataList {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dataRow {
+  display: grid;
+  grid-template-columns: 115px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.dataRow dt {
+  color: #697872;
+  font-size: 10px;
+}
+
+.dataRow dd {
+  min-width: 0;
+  margin: 0;
+  color: #dce6e2;
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.itemsPanel {
+  padding: 15px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.018);
+  display: grid;
+  gap: 11px;
+}
+
+.items {
+  display: grid;
+  gap: 7px;
+}
+
+.item {
+  padding: 11px;
+  border-radius: 10px;
+  background: #0a0f0d;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.itemIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.itemIdentity strong,
+.itemIdentity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemIdentity strong {
+  color: #e2ebe7;
+  font-size: 11px;
+}
+
+.itemIdentity span {
+  color: #687770;
+  font-size: 9px;
+}
+
+.itemQuantity {
+  color: #93a19c;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.itemAmount {
+  color: #dce6e2;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.financials {
+  padding: 15px;
+  border-radius: 13px;
+  border: 1px solid rgba(34, 207, 145, 0.12);
+  background: rgba(34, 207, 145, 0.035);
+  display: grid;
+  gap: 9px;
+}
+
+.financialRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #82918b;
+  font-size: 11px;
+}
+
+.financialRow strong {
+  color: #e4eee9;
+}
+
+.financialTotal {
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: #eaf3ef;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.financialTotal strong {
+  color: #55e5ae;
+  font-size: 15px;
+}
+
+.statusPanel {
+  padding: 15px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: #0b100f;
+  display: grid;
+  gap: 12px;
+}
+
+.statusCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.statusCopy strong {
+  color: #eaf3ef;
+  font-size: 12px;
+}
+
+.statusCopy span {
+  color: #71807a;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.statusActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.statusButton,
+.cancelButton {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.statusButton {
+  border: 0;
+  background: #22cf91;
+  color: #06120e;
+}
+
+.cancelButton {
+  border: 1px solid rgba(255, 111, 111, 0.18);
+  background: rgba(255, 92, 92, 0.06);
+  color: #ffaaaa;
+}
+
+.statusButton:disabled,
+.cancelButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.terminalNotice,
+.success,
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.terminalNotice {
+  color: #92a09b;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.success {
+  color: #72e9bb;
+  background: rgba(34, 207, 145, 0.08);
+}
+
+.error {
+  color: #ff9f9f;
+  background: rgba(255, 92, 92, 0.08);
+}
+
+.timeline {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+}
+
+.timelineStep {
+  min-width: 95px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #65736e;
+  text-align: center;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.timelineCurrent {
+  color: #55e5ae;
+  border-color: rgba(34, 207, 145, 0.2);
+  background: rgba(34, 207, 145, 0.06);
+}
+
+@media (max-width: 850px) {
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .itemAmount {
+    grid-column: 1 / -1;
+  }
+
+  .statusActions,
+  .statusButton,
+  .cancelButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .dataRow {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
