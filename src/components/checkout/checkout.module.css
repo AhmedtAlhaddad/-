@@ -1,0 +1,417 @@
+.page {
+  padding: 54px 0 90px;
+  background:
+    radial-gradient(circle at 85% 0, rgba(0, 163, 90, 0.08), transparent 35%),
+    #090a0b;
+}
+
+.heading {
+  margin-bottom: 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.heading div {
+  display: grid;
+  gap: 5px;
+}
+
+.eyebrow {
+  color: var(--green-bright);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: clamp(31px, 4vw, 44px);
+}
+
+.heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.backLink {
+  color: var(--green-bright);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 30px;
+  align-items: start;
+}
+
+.form,
+.summary,
+.successCard,
+.emptyCard {
+  border: 1px solid var(--line);
+  background: #101211;
+}
+
+.form {
+  padding: 26px;
+  display: grid;
+  gap: 24px;
+}
+
+.formSection {
+  display: grid;
+  gap: 15px;
+}
+
+.sectionHeading {
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 3px;
+}
+
+.sectionHeading strong {
+  font-size: 15px;
+}
+
+.sectionHeading span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field,
+.fullField {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.fullField {
+  grid-column: 1 / -1;
+}
+
+.field span,
+.fullField span {
+  color: #afb5b1;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.field input,
+.fullField input,
+.fullField textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #343836;
+  outline: none;
+  background: #0b0d0c;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.field input,
+.fullField input {
+  min-height: 48px;
+  padding: 0 13px;
+}
+
+.fullField textarea {
+  min-height: 105px;
+  padding: 12px 13px;
+  resize: vertical;
+}
+
+.field input:focus,
+.fullField input:focus,
+.fullField textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(0, 163, 90, 0.09);
+}
+
+.codeHelp,
+.authorityNotice {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.authorityNotice {
+  padding: 12px 14px;
+  border-right: 2px solid var(--green);
+  background: rgba(0, 163, 90, 0.055);
+}
+
+.submitButton {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  cursor: pointer;
+  background: var(--green);
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 101, 114, 0.2);
+  background: rgba(255, 101, 114, 0.07);
+  color: #ff8f99;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.summary {
+  position: sticky;
+  top: 20px;
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.summary h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.items {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.itemImage {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #191b1a;
+}
+
+.itemImage img {
+  object-fit: cover;
+}
+
+.itemCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.itemCopy strong,
+.itemCopy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemCopy strong {
+  font-size: 11px;
+}
+
+.itemCopy span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.itemPrice {
+  color: #d8dfdb;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.previewTotal {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+}
+
+.previewTotal div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.previewTotal span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.previewTotal strong {
+  color: var(--green-bright);
+  font-size: 22px;
+}
+
+.previewTotal small {
+  color: #777d79;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.emptyCard,
+.successCard {
+  min-height: 440px;
+  padding: 45px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 13px;
+  text-align: center;
+}
+
+.emptyIcon,
+.successIcon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 163, 90, 0.1);
+  color: var(--green-bright);
+  font-size: 26px;
+}
+
+.emptyCard h1,
+.successCard h1 {
+  margin: 0;
+}
+
+.emptyCard p,
+.successCard > p {
+  max-width: 580px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.successReference {
+  padding: 12px 20px;
+  border: 1px solid rgba(0, 197, 108, 0.25);
+  background: rgba(0, 163, 90, 0.07);
+  color: #fff;
+  font-size: 13px;
+}
+
+.successReference strong {
+  color: var(--green-bright);
+  font-size: 18px;
+}
+
+.confirmedTotals {
+  width: min(460px, 100%);
+  margin: 6px 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+}
+
+.confirmedTotals div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.confirmedTotals strong {
+  color: #fff;
+}
+
+.confirmedTotals div:last-child {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: #fff;
+  font-weight: 900;
+}
+
+.confirmedTotals div:last-child strong {
+  color: var(--green-bright);
+  font-size: 15px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr 330px;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding-top: 38px;
+  }
+
+  .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .summary {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .form,
+  .summary {
+    padding: 18px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullField {
+    grid-column: auto;
+  }
+
+  .emptyCard,
+  .successCard {
+    min-height: 390px;
+    padding: 28px 18px;
+  }
+
+  .actions,
+  .actions a {
+    width: 100%;
+  }
+}

@@ -22,6 +22,7 @@ interface CartContextValue {
   ) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -97,6 +98,10 @@ export function CartProvider({
     );
   };
 
+  const clearCart = () => {
+    setItems([]);
+  };
+
   const itemCount = items.reduce(
     (sum, item) => sum + item.quantity,
     0,
@@ -123,6 +128,7 @@ export function CartProvider({
       addItem,
       updateQuantity,
       removeItem,
+      clearCart,
     }),
     [items, itemCount, subtotal],
   );
