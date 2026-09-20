@@ -353,7 +353,9 @@ export async function PATCH(
       .from(
         "product_variants",
       )
-      .select("id")
+      .select(
+        "id, stock_quantity",
+      )
       .eq(
         "product_id",
         id,
@@ -376,6 +378,19 @@ export async function PATCH(
       ).map(
         (variant) =>
           variant.id,
+      ),
+    );
+
+  const stockByVariantId =
+    new Map(
+      (
+        existingVariants ??
+        []
+      ).map(
+        (variant) => [
+          variant.id,
+          variant.stock_quantity,
+        ] as const,
       ),
     );
 
@@ -850,6 +865,8 @@ export async function PATCH(
   ) {
     const {
       id: variantId,
+      stock_quantity:
+        requestedStock,
       ...values
     } = variant;
 
@@ -874,6 +891,8 @@ export async function PATCH(
           );
 
       if (error) {
+        revalidatePublicCatalog();
+
         return errorResponse(
           postgresMessage(
             error.code,
@@ -881,8 +900,65 @@ export async function PATCH(
           ),
         );
       }
+
+      const currentStock =
+        stockByVariantId.get(
+          variantId,
+        );
+
+      if (
+        currentStock ===
+        undefined
+      ) {
+        revalidatePublicCatalog();
+
+        return errorResponse(
+          "تعذر التحقق من مخزون الـVariant.",
+          500,
+        );
+      }
+
+      const quantityChange =
+        requestedStock -
+        currentStock;
+
+      if (
+        quantityChange !== 0
+      ) {
+        const {
+          error:
+            inventoryError,
+        } =
+          await supabase.rpc(
+            "adjust_inventory",
+            {
+              p_variant_id:
+                variantId,
+
+              p_quantity_change:
+                quantityChange,
+
+              p_reason:
+                "correction",
+
+              p_note:
+                "Stock adjusted from product editor",
+            },
+          );
+
+        if (inventoryError) {
+          revalidatePublicCatalog();
+
+          return errorResponse(
+            "تم حفظ بيانات المنتج، لكن تعذر تسجيل تعديل المخزون بأمان. حدّث الصفحة وراجع صفحة المخزون.",
+            500,
+          );
+        }
+      }
     } else {
       const {
+        data:
+          createdVariant,
         error,
       } =
         await supabase
@@ -894,15 +970,59 @@ export async function PATCH(
               id,
 
             ...values,
-          });
 
-      if (error) {
+            stock_quantity: 0,
+          })
+          .select("id")
+          .single();
+
+      if (
+        error ||
+        !createdVariant
+      ) {
+        revalidatePublicCatalog();
+
         return errorResponse(
           postgresMessage(
-            error.code,
-            error.message,
+            error?.code,
+            error?.message ??
+              "تعذر إنشاء الـVariant.",
           ),
         );
+      }
+
+      if (
+        requestedStock > 0
+      ) {
+        const {
+          error:
+            inventoryError,
+        } =
+          await supabase.rpc(
+            "adjust_inventory",
+            {
+              p_variant_id:
+                createdVariant.id,
+
+              p_quantity_change:
+                requestedStock,
+
+              p_reason:
+                "restock",
+
+              p_note:
+                "Initial stock for new product variant",
+            },
+          );
+
+        if (inventoryError) {
+          revalidatePublicCatalog();
+
+          return errorResponse(
+            "تم إنشاء الـVariant، لكن تعذر تسجيل مخزونه الابتدائي بأمان. حدّث الصفحة وراجع صفحة المخزون.",
+            500,
+          );
+        }
       }
     }
   }

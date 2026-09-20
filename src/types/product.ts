@@ -1,4 +1,4 @@
-export type ProductCategory = "بروتين" | "قبل التمرين" | "كرياتين" | "أحماض أمينية" | "إكسسوارات اللياقة";
+export type ProductCategory = string;
 export type TrainingGoal = "بناء العضلات" | "الطاقة والتحمل" | "إدارة الوزن" | "الاستشفاء";
 
 export interface ProductVariant {

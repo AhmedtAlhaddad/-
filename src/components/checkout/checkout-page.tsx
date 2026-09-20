@@ -33,7 +33,11 @@ function formatMoney(value: number, currency = "LYD") {
 }
 
 export function CheckoutPage({ initialCode }: { initialCode: string }) {
-  const { items, subtotal, clearCart } = useCart();
+  const {
+    items,
+    subtotal,
+    clearCart,
+  } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmedOrder, setConfirmedOrder] =
@@ -329,12 +333,18 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
                 return (
                   <article key={item.id} className={styles.item}>
                     <div className={styles.itemImage}>
-                      <Image
-                        src={item.product.images[0]}
-                        alt={item.product.shortName}
-                        fill
-                        sizes="58px"
-                      />
+                      {item.product.images[0] ? (
+                        <Image
+                          src={item.product.images[0]}
+                          alt={item.product.shortName}
+                          fill
+                          sizes="58px"
+                        />
+                      ) : (
+                        <span aria-hidden="true">
+                          {item.product.shortName.charAt(0)}
+                        </span>
+                      )}
                     </div>
                     <div className={styles.itemCopy}>
                       <strong>{item.product.shortName}</strong>

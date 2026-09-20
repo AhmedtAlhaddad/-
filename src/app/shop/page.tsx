@@ -56,6 +56,21 @@ export default async function Page({
     query.page,
     SHOP_PAGE_SIZE,
   );
+  const categoryLabels = new Map(
+    categoryOptions.map((category) => [
+      category.slug,
+      category.label,
+    ]),
+  );
+  const products = catalog.products.map(
+    (product) => ({
+      ...product,
+      category:
+        categoryLabels.get(
+          product.category,
+        ) ?? product.category,
+    }),
+  );
 
   if (
     catalog.page !== query.page ||
@@ -75,7 +90,7 @@ export default async function Page({
   return (
     <StoreChrome>
       <ShopPage
-        products={catalog.products}
+        products={products}
         total={catalog.total}
         totalPages={catalog.totalPages}
         query={query}

@@ -15,7 +15,12 @@ import {
 import { formatPrice } from "@/lib/utils";
 
 export function CartPage() {
-  const { items, subtotal, updateQuantity, removeItem } = useCart();
+  const {
+    items,
+    subtotal,
+    updateQuantity,
+    removeItem,
+  } = useCart();
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const checkoutHref = code.trim()
@@ -59,12 +64,18 @@ export function CartPage() {
               return (
                 <article className="cart-item" key={item.id}>
                   <div className="cart-item-image">
-                    <Image
-                      src={item.product.images[0]}
-                      alt={item.product.shortName}
-                      fill
-                      sizes="120px"
-                    />
+                    {item.product.images[0] ? (
+                      <Image
+                        src={item.product.images[0]}
+                        alt={item.product.shortName}
+                        fill
+                        sizes="120px"
+                      />
+                    ) : (
+                      <span aria-hidden="true">
+                        {item.product.shortName.charAt(0)}
+                      </span>
+                    )}
                   </div>
                   <div className="cart-item-main">
                     <small>{item.product.category}</small>

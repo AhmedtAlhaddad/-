@@ -736,10 +736,13 @@ export async function POST(
           product.id,
 
         ...variant,
+
+        stock_quantity: 0,
       }),
     );
 
   const {
+    data: createdVariants,
     error: variantsError,
   } =
     await supabase
@@ -748,9 +751,15 @@ export async function POST(
       )
       .insert(
         variantRows,
-      );
+      )
+      .select("id, sku");
 
-  if (variantsError) {
+  if (
+    variantsError ||
+    !createdVariants ||
+    createdVariants.length !==
+      normalizedVariants.length
+  ) {
     /*
      * محاولة تنظيف المنتج
      * في حال فشل إنشاء الـVariants.
@@ -767,14 +776,66 @@ export async function POST(
       {
         error:
           postgresMessage(
-            variantsError.code,
-            variantsError.message,
+            variantsError?.code,
+            variantsError?.message ??
+              "تعذر إنشاء خيارات المنتج.",
           ),
       },
       {
         status: 400,
       },
     );
+  }
+
+  for (
+    const createdVariant of
+    createdVariants ?? []
+  ) {
+    const requestedStock =
+      normalizedVariants.find(
+        (variant) =>
+          variant.sku ===
+          createdVariant.sku,
+      )?.stock_quantity ?? 0;
+
+    if (requestedStock === 0) {
+      continue;
+    }
+
+    const {
+      error: inventoryError,
+    } =
+      await supabase.rpc(
+        "adjust_inventory",
+        {
+          p_variant_id:
+            createdVariant.id,
+
+          p_quantity_change:
+            requestedStock,
+
+          p_reason:
+            "restock",
+
+          p_note:
+            "Initial stock during product creation",
+        },
+      );
+
+    if (inventoryError) {
+      return NextResponse.json(
+        {
+          error:
+            "تم إنشاء المنتج كمسودة، لكن تعذر تسجيل المخزون الابتدائي بأمان. راجع المخزون قبل تفعيل المنتج.",
+
+          productId:
+            product.id,
+        },
+        {
+          status: 500,
+        },
+      );
+    }
   }
 
   const {

@@ -270,29 +270,16 @@ const catalogCardSelect = `
 `;
 
 function mapCategory(
-  slug: string | undefined,
+  category:
+    | CategoryRow
+    | null,
 ): ProductCategory {
-  switch (slug) {
-    case "protein":
-      return "بروتين";
-
-    case "pre-workout":
-      return "قبل التمرين";
-
-    case "creatine":
-      return "كرياتين";
-
-    case "amino-acids":
-    case "bcaa":
-      return "أحماض أمينية";
-
-    case "fitness-accessories":
-    case "accessories":
-      return "إكسسوارات اللياقة";
-
-    default:
-      return "بروتين";
-  }
+  return (
+    category?.name_ar.trim() ||
+    category?.name_en?.trim() ||
+    category?.slug ||
+    ""
+  );
 }
 
 function mapTrainingGoal(
@@ -376,30 +363,8 @@ function getImageUrl(
   );
 }
 
-function getCategoryFallbackImage(
-  slug: string,
-): string {
-  switch (slug) {
-    case "protein":
-      return "/images/cat-protein.jpg";
-
-    case "pre-workout":
-      return "/images/cat-preworkout.jpg";
-
-    case "creatine":
-      return "/images/product-creatine.jpg";
-
-    case "amino-acids":
-    case "bcaa":
-      return "/images/product-bcaa.jpg";
-
-    case "fitness-accessories":
-    case "accessories":
-      return "/images/cat-accessories.jpg";
-
-    default:
-      return "/images/cat-protein.jpg";
-  }
+function getCategoryFallbackImage(): string {
+  return "/images/search-promo.jpg";
 }
 
 function formatWeight(
@@ -615,7 +580,7 @@ function mapProduct(
 
     category:
       mapCategory(
-        row.category?.slug,
+        row.category,
       ),
 
     goal:
@@ -739,7 +704,7 @@ function mapStorefrontProduct(
     brand: row.brand_name_ar,
     name: row.name_ar,
     shortName: row.name_ar,
-    category: mapCategory(row.category_slug),
+    category: row.category_slug,
     rating: 0,
     images: image ? [image] : [],
     badge: row.badge_label_ar ?? undefined,
@@ -1079,9 +1044,7 @@ export async function getCategories(): Promise<
           getStorageUrl(
             category.image_path,
           ) ??
-          getCategoryFallbackImage(
-            category.slug,
-          ),
+          getCategoryFallbackImage(),
 
         href:
           `/shop?category=${encodeURIComponent(
