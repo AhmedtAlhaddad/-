@@ -2,9 +2,9 @@ import { HomePage } from "@/components/home/home-sections";
 import { StoreChrome } from "@/components/layout/footer";
 
 import {
-  getBrands,
-  getCategories,
   getFeaturedProducts,
+  getHomepageCategories,
+  getLatestBrands,
 } from "@/lib/supabase/catalog-cache";
 
 export const revalidate =
@@ -17,12 +17,12 @@ export default async function Page() {
     categories,
   ] = await Promise.all([
     getFeaturedProducts(4),
-    getBrands(),
-    getCategories(),
+    getLatestBrands(),
+    getHomepageCategories(),
   ]);
 
   return (
-    <StoreChrome newsletter>
+    <StoreChrome community>
       <HomePage
         products={products}
         brands={brands}

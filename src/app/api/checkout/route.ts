@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { revalidatePublicCatalog } from "@/lib/supabase/revalidate-catalog";
 import { createClient } from "@/lib/supabase/server";
 
 type CheckoutItem = {
@@ -232,6 +233,8 @@ export async function POST(request: Request) {
       500,
     );
   }
+
+  revalidatePublicCatalog();
 
   return NextResponse.json({
     success: true,

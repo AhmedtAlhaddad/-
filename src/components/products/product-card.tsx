@@ -7,7 +7,6 @@ import { useCart } from "@/components/cart/cart-provider";
 
 import {
   PlusIcon,
-  StarIcon,
 } from "@/components/ui/icons";
 
 import { formatPrice } from "@/lib/utils";
@@ -71,11 +70,6 @@ export function ProductCard({
         <div className="product-meta">
           <span>
             {product.brand}
-          </span>
-
-          <span className="rating">
-            <StarIcon />{" "}
-            {product.rating}
           </span>
         </div>
 

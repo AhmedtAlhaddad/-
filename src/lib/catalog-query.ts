@@ -6,27 +6,30 @@ export const SHOP_PAGE_SIZE = 24;
 export const SEARCH_PAGE_SIZE = 20;
 
 export const goalOptions: TrainingGoal[] = [
-  "بناء العضلات",
-  "الطاقة والتحمل",
-  "إدارة الوزن",
-  "الاستشفاء",
+  "بناء عضلات",
+  "زيادة الوزن وقدرة التحمل",
+  "حرق الدهون وانقاص الوزن",
 ];
 
 export const sortOptions = [
   "featured",
   "price-asc",
   "price-desc",
-  "rating",
 ] as const;
 
 export type CatalogSort =
   (typeof sortOptions)[number];
+
+export type ProductScope =
+  | "supplements"
+  | "accessories";
 
 export type ShopQuery = {
   categories: string[];
   goals: TrainingGoal[];
   available: boolean;
   sort: CatalogSort;
+  productScope: ProductScope | null;
   page: number;
 };
 
@@ -39,16 +42,15 @@ const trainingGoals: Record<
   TrainingGoal,
   string[]
 > = {
-  "بناء العضلات": [
+  "بناء عضلات": [
     "muscle-support",
     "muscle-building",
   ],
-  "الطاقة والتحمل": [
+  "زيادة الوزن وقدرة التحمل": [
     "energy-endurance",
     "energy",
   ],
-  "إدارة الوزن": ["weight-management"],
-  "الاستشفاء": ["recovery"],
+  "حرق الدهون وانقاص الوزن": ["weight-management"],
 };
 
 function values(
@@ -90,6 +92,9 @@ export function normalizeShopQuery(
   const requestedSort = Array.isArray(params.sort)
     ? params.sort[0]
     : params.sort;
+  const requestedScope = Array.isArray(params.type)
+    ? params.type[0]
+    : params.type;
 
   return {
     categories: activeCategorySlugs.filter((item) =>
@@ -103,8 +108,24 @@ export function normalizeShopQuery(
       sortOptions.find(
         (item) => item === requestedSort,
       ) ?? "featured",
+    productScope:
+      requestedScope === "supplements" ||
+      requestedScope === "accessories"
+        ? requestedScope
+        : null,
     page: normalizePage(params.page),
   };
+}
+
+export function isProductScopeCanonical(
+  value: string | string[] | undefined,
+  productScope: ProductScope | null,
+) {
+  if (!productScope) {
+    return value === undefined;
+  }
+
+  return value === productScope;
 }
 
 export function areCategoryParamsCanonical(
@@ -154,6 +175,10 @@ export function buildShopHref(query: ShopQuery) {
 
   if (query.sort !== "featured") {
     params.set("sort", query.sort);
+  }
+
+  if (query.productScope) {
+    params.set("type", query.productScope);
   }
 
   if (query.page > 1) {

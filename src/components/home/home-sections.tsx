@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CategoryCarousel } from "@/components/home/category-carousel";
 import { ProductGrid } from "@/components/products/product-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/icons";
 
 import type { Brand } from "@/types/brand";
-import type { Category } from "@/types/category";
+import type { HomepageCategory } from "@/types/category";
 import type { CatalogProduct } from "@/types/product";
 
 export function Hero() {
@@ -50,7 +51,7 @@ export function Hero() {
         <div className="hero-actions">
           <Link
             className="button primary"
-            href="/shop"
+            href="/shop?type=supplements"
           >
             تسوّق الآن
             <ArrowIcon />
@@ -58,9 +59,9 @@ export function Hero() {
 
           <Link
             className="button ghost"
-            href="#goals"
+            href="#training-goals"
           >
-            تعرّف على المجموعة
+            اختر مكملاتك بناء على هدفك
           </Link>
         </div>
       </div>
@@ -125,52 +126,26 @@ export function BrandStrip({
 export function CategorySection({
   categories,
 }: {
-  categories: Category[];
+  categories: HomepageCategory[];
 }) {
-  if (!categories.length) {
-    return null;
-  }
-
   return (
-    <section className="section container">
+    <section
+      id="categories"
+      className="section container anchor-section"
+    >
       <SectionHeading
         kicker="اختيارات تناسبك"
         title="تصفح حسب الفئة"
         description="تصفح المنتجات حسب الفئة التي تناسب احتياجاتك."
       />
 
-      <div className="category-grid">
-        {categories.map(
-          (category) => (
-            <Link
-              href={category.href}
-              className="category-card"
-              key={`${category.name}-${category.href}`}
-            >
-              <Image
-                src={category.image}
-                alt={category.name}
-                fill
-                sizes="(max-width: 700px) 50vw, 25vw"
-              />
-
-              <div />
-
-              <span>
-                <b>
-                  {category.name}
-                </b>
-
-                <small>
-                  {
-                    category.description
-                  }
-                </small>
-              </span>
-            </Link>
-          ),
-        )}
-      </div>
+      {categories.length > 0 ? (
+        <CategoryCarousel categories={categories} />
+      ) : (
+        <div className="empty-state">
+          <p>لا توجد أصناف متاحة حاليًا.</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -178,41 +153,41 @@ export function CategorySection({
 const goals = [
   {
     title:
-      "بناء العضلات",
+      "بناء عضلات",
     copy:
       "تصفح المنتجات المرتبطة بأهداف القوة والكتلة العضلية",
     image:
       "/images/goal-muscle.jpg",
     href:
-      "/shop",
+      `/shop?goal=${encodeURIComponent("بناء عضلات")}`,
   },
   {
     title:
-      "الطاقة والتحمل",
+      "زيادة الوزن وقدرة التحمل",
     copy:
       "تصفح الخيارات المرتبطة بالطاقة والأداء الرياضي",
     image:
       "/images/goal-energy.jpg",
     href:
-      "/shop",
+      `/shop?goal=${encodeURIComponent("زيادة الوزن وقدرة التحمل")}`,
   },
   {
     title:
-      "إدارة الوزن",
+      "حرق الدهون وانقاص الوزن",
     copy:
       "تصفح الخيارات حسب احتياجاتك الغذائية والرياضية",
     image:
       "/images/goal-weight.jpg",
     href:
-      "/shop",
+      `/shop?goal=${encodeURIComponent("حرق الدهون وانقاص الوزن")}`,
   },
 ];
 
 export function GoalsSection() {
   return (
     <section
-      id="goals"
-      className="section container"
+      id="training-goals"
+      className="section container anchor-section"
     >
       <SectionHeading
         kicker="تسوق حسب الهدف"
@@ -325,7 +300,7 @@ export function HomePage({
 }: {
   products: CatalogProduct[];
   brands: Brand[];
-  categories: Category[];
+  categories: HomepageCategory[];
 }) {
   const featuredProducts =
     products.slice(0, 4);

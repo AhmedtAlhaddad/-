@@ -144,6 +144,18 @@ export function ShopPage({
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const heading =
+    query.productScope === "accessories"
+      ? "إكسسوارات اللياقة"
+      : query.productScope === "supplements"
+        ? "المكملات الغذائية"
+        : "كل المنتجات";
+  const description =
+    query.productScope === "accessories"
+      ? "استكشف إكسسوارات اللياقة المتاحة واختر ما يناسب تدريبك."
+      : query.productScope === "supplements"
+        ? "استكشف مجموعتنا المختارة من المكملات الغذائية لدعم احتياجاتك الرياضية."
+        : "استكشف مجموعتنا المختارة من المكملات الغذائية وإكسسوارات اللياقة.";
 
   const navigate = (next: ShopQuery) => {
     startTransition(() => {
@@ -171,6 +183,7 @@ export function ShopPage({
       goals: [],
       available: false,
       sort: query.sort,
+      productScope: query.productScope,
       page: 1,
     });
   };
@@ -193,12 +206,9 @@ export function ShopPage({
     <main>
       <section className="collection-hero">
         <div className="container">
-          <span>الرئيسية / المكملات الغذائية</span>
-          <h1>كل المكملات</h1>
-          <p>
-            استكشف مجموعتنا المختارة من المكملات الغذائية والإكسسوارات
-            لدعم احتياجاتك الرياضية.
-          </p>
+          <span>الرئيسية / {heading}</span>
+          <h1>{heading}</h1>
+          <p>{description}</p>
         </div>
       </section>
 
@@ -251,9 +261,6 @@ export function ShopPage({
             }
           >
             <option value="featured">المنتجات المميزة</option>
-            <option value="rating">
-              الأعلى تقييمًا (لا توجد تقييمات بعد)
-            </option>
             <option value="price-asc">السعر: الأقل أولًا</option>
             <option value="price-desc">السعر: الأعلى أولًا</option>
           </select>

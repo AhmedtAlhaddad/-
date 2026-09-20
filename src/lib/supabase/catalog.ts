@@ -1,14 +1,16 @@
 import { supabase } from "@/lib/supabase/client";
 
 import type { Brand } from "@/types/brand";
-import type { CatalogCategory } from "@/types/category";
+import type {
+  CatalogCategory,
+  HomepageCategory,
+} from "@/types/category";
 import type {
   CatalogProduct,
   Product,
   ProductCategory,
   ProductVariant,
   SearchProduct,
-  TrainingGoal,
 } from "@/types/product";
 
 import type {
@@ -39,6 +41,7 @@ type CatalogBrandRow = {
   logo_path: string | null;
   active: boolean;
   sort_order: number;
+  created_at: string;
 };
 
 type CatalogCategoryRow = {
@@ -47,9 +50,20 @@ type CatalogCategoryRow = {
   name_ar: string;
   name_en: string | null;
   description_ar: string | null;
-  image_path: string | null;
   active: boolean;
   sort_order: number;
+};
+
+type CategoryProductRow = {
+  category_id: string;
+  images: Array<{
+    id: string;
+    storage_path: string | null;
+    external_url: string | null;
+    sort_order: number;
+    is_primary: boolean;
+    created_at: string;
+  }>;
 };
 
 type VariantRow = {
@@ -161,6 +175,7 @@ export type CatalogPageQuery = {
   trainingGoals: string[];
   available: boolean;
   sort: CatalogSort;
+  productScope: "supplements" | "accessories" | null;
   page: number;
   pageSize: number;
 };
@@ -282,29 +297,6 @@ function mapCategory(
   );
 }
 
-function mapTrainingGoal(
-  goal: string | null,
-): TrainingGoal {
-  switch (goal) {
-    case "muscle-support":
-    case "muscle-building":
-      return "بناء العضلات";
-
-    case "energy-endurance":
-    case "energy":
-      return "الطاقة والتحمل";
-
-    case "weight-management":
-      return "إدارة الوزن";
-
-    case "recovery":
-      return "الاستشفاء";
-
-    default:
-      return "بناء العضلات";
-  }
-}
-
 function mapProductType(
   type: string | null,
 ): string {
@@ -352,7 +344,10 @@ function getStorageUrl(
 }
 
 function getImageUrl(
-  image: ImageRow,
+  image: {
+    storage_path: string | null;
+    external_url: string | null;
+  },
 ): string | null {
   if (image.external_url) {
     return image.external_url;
@@ -361,10 +356,6 @@ function getImageUrl(
   return getStorageUrl(
     image.storage_path,
   );
-}
-
-function getCategoryFallbackImage(): string {
-  return "/images/search-promo.jpg";
 }
 
 function formatWeight(
@@ -583,17 +574,6 @@ function mapProduct(
         row.category,
       ),
 
-    goal:
-      mapTrainingGoal(
-        row.training_goal,
-      ),
-
-    rating:
-      0,
-
-    reviewCount:
-      0,
-
     images:
       productImages,
 
@@ -631,7 +611,6 @@ function compactCatalogProduct(
     name: product.name,
     shortName: product.shortName,
     category: product.category,
-    rating: 0,
     images: product.images.slice(0, 1),
     badge: product.badge,
     inStock: product.inStock,
@@ -688,14 +667,8 @@ function mapStorefrontProduct(
   } satisfies VariantRow;
 
   const image = getImageUrl({
-    id: row.id,
-    variant_id: null,
     storage_path: row.image_storage_path,
     external_url: row.image_external_url,
-    alt_text_ar: null,
-    alt_text_en: null,
-    sort_order: 0,
-    is_primary: true,
   });
 
   return {
@@ -705,7 +678,6 @@ function mapStorefrontProduct(
     name: row.name_ar,
     shortName: row.name_ar,
     category: row.category_slug,
-    rating: 0,
     images: image ? [image] : [],
     badge: row.badge_label_ar ?? undefined,
     inStock: row.in_stock,
@@ -736,27 +708,35 @@ async function runStorefrontQuery({
   trainingGoals,
   available,
   sort,
+  productScope,
   search,
   page,
   pageSize,
 }: CatalogPageQuery & { search?: string }) {
+  const functionName = productScope
+    ? "list_storefront_products_by_scope"
+    : "list_storefront_products";
+  const parameters = {
+    p_category_slugs:
+      categorySlugs.length > 0
+        ? categorySlugs
+        : null,
+    p_training_goals:
+      trainingGoals.length > 0
+        ? trainingGoals
+        : null,
+    p_available: available,
+    p_sort: sort,
+    p_search: search || null,
+    p_offset: (page - 1) * pageSize,
+    p_limit: pageSize,
+    ...(productScope
+      ? { p_product_scope: productScope }
+      : {}),
+  };
   const { data, error } = await supabase.rpc(
-    "list_storefront_products",
-    {
-      p_category_slugs:
-        categorySlugs.length > 0
-          ? categorySlugs
-          : null,
-      p_training_goals:
-        trainingGoals.length > 0
-          ? trainingGoals
-          : null,
-      p_available: available,
-      p_sort: sort,
-      p_search: search || null,
-      p_offset: (page - 1) * pageSize,
-      p_limit: pageSize,
-    },
+    functionName,
+    parameters,
   );
 
   if (error) {
@@ -856,6 +836,7 @@ export async function searchProducts(
     trainingGoals: [],
     available: false,
     sort: "featured",
+    productScope: null,
     search,
     page,
     pageSize,
@@ -886,17 +867,46 @@ export async function getFeaturedProducts(
   limit = 4,
   excludeProductSlug?: string,
 ): Promise<CatalogProduct[]> {
+  const { data: rankedData, error: rankedError } =
+    await supabase.rpc(
+      "list_storefront_featured_products",
+      {
+        p_limit: limit,
+        p_exclude_slug:
+          excludeProductSlug ?? null,
+      },
+    );
+
+  if (!rankedError) {
+    return (
+      (rankedData ?? []) as StorefrontProductRow[]
+    )
+      .map(mapStorefrontProduct)
+      .filter(
+        (product) => product.variants.length > 0,
+      );
+  }
+
+  if (
+    rankedError.code !== "PGRST202" &&
+    rankedError.code !== "42883"
+  ) {
+    console.error(
+      "Failed to fetch ranked storefront products:",
+      rankedError,
+    );
+
+    throw rankedError;
+  }
+
   let query = supabase
     .from("products")
     .select(catalogCardSelect)
     .eq("status", "active")
-    .order("featured", {
-      ascending: false,
-    })
     .order("created_at", {
       ascending: false,
     })
-    .limit(limit);
+    .limit(Math.max(limit * 10, 40));
 
   if (excludeProductSlug) {
     query = query.neq("slug", excludeProductSlug);
@@ -919,7 +929,65 @@ export async function getFeaturedProducts(
         row as unknown as CatalogProductRow,
       ),
     )
-    .filter((product) => product.variants.length > 0);
+    .filter((product) => product.variants.length > 0)
+    .sort(
+      (left, right) =>
+        right.variants.reduce(
+          (total, variant) => total + variant.stock,
+          0,
+        ) -
+        left.variants.reduce(
+          (total, variant) => total + variant.stock,
+          0,
+        ),
+    )
+    .slice(0, limit);
+}
+
+export async function getLatestBrands(): Promise<
+  Brand[]
+> {
+  const { data, error } = await supabase
+    .from("brands")
+    .select(`
+      id,
+      slug,
+      name_ar,
+      name_en,
+      logo_path,
+      active,
+      sort_order,
+      created_at
+    `)
+    .eq("active", true)
+    .order("created_at", {
+      ascending: false,
+    })
+    .order("id", {
+      ascending: false,
+    })
+    .limit(5);
+
+  if (error) {
+    console.error(
+      "Failed to fetch latest brands:",
+      error,
+    );
+
+    throw error;
+  }
+
+  return (data ?? []).map((row) => {
+    const brand = row as CatalogBrandRow;
+
+    return {
+      id: brand.id,
+      name:
+        brand.name_ar.trim() ||
+        brand.name_en?.trim() ||
+        brand.slug,
+    };
+  });
 }
 
 export async function getBrands(): Promise<
@@ -980,9 +1048,7 @@ export async function getBrands(): Promise<
   );
 }
 
-export async function getCategories(): Promise<
-  CatalogCategory[]
-> {
+async function getActiveCategoryRows() {
   const { data, error } =
     await supabase
       .from("categories")
@@ -992,7 +1058,6 @@ export async function getCategories(): Promise<
         name_ar,
         name_en,
         description_ar,
-        image_path,
         active,
         sort_order
       `)
@@ -1022,35 +1087,137 @@ export async function getCategories(): Promise<
     throw error;
   }
 
-  return (data ?? []).map(
-    (row) => {
-      const category =
-        row as CatalogCategoryRow;
+  return (data ?? []) as CatalogCategoryRow[];
+}
 
-      return {
-        slug:
-          category.slug,
+function mapCatalogCategory(
+  category: CatalogCategoryRow,
+): CatalogCategory {
+  return {
+    slug: category.slug,
+    name:
+      category.name_ar.trim() ||
+      category.name_en?.trim() ||
+      category.slug,
+    description:
+      category.description_ar ??
+      "تصفح منتجات هذه الفئة",
+    href: `/shop?category=${encodeURIComponent(
+      category.slug,
+    )}`,
+  };
+}
 
-        name:
-          category.name_ar.trim() ||
-          category.name_en?.trim() ||
-          category.slug,
+export async function getCategories(): Promise<
+  CatalogCategory[]
+> {
+  const categoryRows = await getActiveCategoryRows();
 
-        description:
-          category.description_ar ??
-          "تصفح منتجات هذه الفئة",
+  return categoryRows.map(mapCatalogCategory);
+}
 
-        image:
-          getStorageUrl(
-            category.image_path,
-          ) ??
-          getCategoryFallbackImage(),
-
-        href:
-          `/shop?category=${encodeURIComponent(
-            category.slug,
-          )}`,
-      };
-    },
+export async function getHomepageCategories(): Promise<
+  HomepageCategory[]
+> {
+  const categoryRows = await getActiveCategoryRows();
+  const categoryIds = categoryRows.map(
+    (category) => category.id,
   );
+  let productRows: CategoryProductRow[] = [];
+
+  if (categoryIds.length > 0) {
+    const {
+      data: imageData,
+      error: imageError,
+    } = await supabase
+      .from("products")
+      .select(`
+        category_id,
+        images:product_images (
+          id,
+          storage_path,
+          external_url,
+          sort_order,
+          is_primary,
+          created_at
+        )
+      `)
+      .eq("status", "active")
+      .in("category_id", categoryIds)
+      .order("created_at", {
+        ascending: false,
+      })
+      .order("id", {
+        ascending: true,
+      });
+
+    if (imageError) {
+      console.error(
+        "Failed to fetch category product images:",
+        imageError,
+      );
+
+      throw imageError;
+    }
+
+    productRows = (imageData ??
+      []) as unknown as CategoryProductRow[];
+  }
+
+  const imagesByCategory = new Map<
+    string,
+    string[]
+  >();
+
+  productRows.forEach((product) => {
+    const urls = [...(product.images ?? [])]
+      .sort((left, right) => {
+        if (
+          left.is_primary !== right.is_primary
+        ) {
+          return left.is_primary ? -1 : 1;
+        }
+
+        const sortOrder =
+          left.sort_order - right.sort_order;
+
+        if (sortOrder !== 0) {
+          return sortOrder;
+        }
+
+        return (
+          left.created_at.localeCompare(
+            right.created_at,
+          ) || left.id.localeCompare(right.id)
+        );
+      })
+      .map(getImageUrl)
+      .filter(
+        (url): url is string => Boolean(url),
+      );
+    let existing =
+      imagesByCategory.get(product.category_id) ??
+      [];
+
+    for (const image of urls) {
+      if (
+        existing.includes(image) ||
+        existing.length >= 8
+      ) {
+        continue;
+      }
+
+      existing = [...existing, image];
+    }
+
+    imagesByCategory.set(
+      product.category_id,
+      existing,
+    );
+  });
+
+  return categoryRows.map((category) => ({
+    ...mapCatalogCategory(category),
+    images: imagesByCategory.get(category.id) ?? [],
+  }));
 }

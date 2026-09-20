@@ -10,7 +10,6 @@ import {
   CheckIcon,
   MinusIcon,
   PlusIcon,
-  StarIcon,
 } from "@/components/ui/icons";
 
 import { formatPrice } from "@/lib/utils";
@@ -224,19 +223,6 @@ export function ProductDetail({
           <h1>
             {product.name}
           </h1>
-
-          <div className="product-rating">
-            <span>
-              <StarIcon />{" "}
-              {product.rating}
-            </span>
-
-            <span>
-              (
-              {product.reviewCount}{" "}
-              تقييم)
-            </span>
-          </div>
 
           <p className="product-brand">
             {product.brand}

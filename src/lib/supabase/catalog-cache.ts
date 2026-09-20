@@ -7,12 +7,15 @@ import {
   getCatalogPage as fetchCatalogPage,
   getCategories as fetchCategories,
   getFeaturedProducts as fetchFeaturedProducts,
+  getHomepageCategories as fetchHomepageCategories,
+  getLatestBrands as fetchLatestBrands,
   getProductBySlug as fetchProductBySlug,
   searchProducts as fetchSearchProducts,
 } from "@/lib/supabase/catalog";
 
 import type {
   CatalogSort,
+  ProductScope,
 } from "@/lib/catalog-query";
 
 import {
@@ -31,7 +34,7 @@ const cachedFeaturedProducts =
         excludeProductSlug,
       ),
     [
-      "public-catalog-featured-products-v2",
+      "public-catalog-featured-products-v3",
     ],
     {
       revalidate:
@@ -49,6 +52,7 @@ const cachedCatalogPage = unstable_cache(
     trainingGoals: string[],
     available: boolean,
     sort: CatalogSort,
+    productScope: ProductScope | null,
     page: number,
     pageSize: number,
   ) =>
@@ -57,10 +61,11 @@ const cachedCatalogPage = unstable_cache(
       trainingGoals,
       available,
       sort,
+      productScope,
       page,
       pageSize,
     }),
-  ["public-catalog-list-v2"],
+  ["public-catalog-list-v3"],
   {
     revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS,
     tags: [PUBLIC_CATALOG_CACHE_TAG],
@@ -118,12 +123,23 @@ const cachedBrands =
     },
   );
 
+const cachedLatestBrands =
+  unstable_cache(
+    async () => fetchLatestBrands(),
+    ["public-catalog-latest-brands-v1"],
+    {
+      revalidate:
+        PUBLIC_CATALOG_REVALIDATE_SECONDS,
+      tags: [PUBLIC_CATALOG_CACHE_TAG],
+    },
+  );
+
 const cachedCategories =
   unstable_cache(
     async () =>
       fetchCategories(),
     [
-      "public-catalog-categories-v2",
+      "public-catalog-categories-v4",
     ],
     {
       revalidate:
@@ -132,6 +148,17 @@ const cachedCategories =
       tags: [
         PUBLIC_CATALOG_CACHE_TAG,
       ],
+    },
+  );
+
+const cachedHomepageCategories =
+  unstable_cache(
+    async () => fetchHomepageCategories(),
+    ["public-catalog-homepage-categories-v1"],
+    {
+      revalidate:
+        PUBLIC_CATALOG_REVALIDATE_SECONDS,
+      tags: [PUBLIC_CATALOG_CACHE_TAG],
     },
   );
 
@@ -150,6 +177,7 @@ export async function getCatalogPage(
   trainingGoals: string[],
   available: boolean,
   sort: CatalogSort,
+  productScope: ProductScope | null,
   page: number,
   pageSize: number,
 ) {
@@ -158,6 +186,7 @@ export async function getCatalogPage(
     trainingGoals,
     available,
     sort,
+    productScope,
     page,
     pageSize,
   );
@@ -183,6 +212,14 @@ export async function getBrands() {
   return cachedBrands();
 }
 
+export async function getLatestBrands() {
+  return cachedLatestBrands();
+}
+
 export async function getCategories() {
   return cachedCategories();
+}
+
+export async function getHomepageCategories() {
+  return cachedHomepageCategories();
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { revalidatePublicCatalog } from "@/lib/supabase/revalidate-catalog";
 import { createClient } from "@/lib/supabase/server";
 
 type OrderStatus =
@@ -176,6 +177,8 @@ export async function POST(request: Request) {
     const result = statusError(error.code, error.message);
     return errorResponse(result.message, result.status);
   }
+
+  revalidatePublicCatalog();
 
   return NextResponse.json({ success: true });
 }

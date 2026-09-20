@@ -1,5 +1,8 @@
 export type ProductCategory = string;
-export type TrainingGoal = "بناء العضلات" | "الطاقة والتحمل" | "إدارة الوزن" | "الاستشفاء";
+export type TrainingGoal =
+  | "بناء عضلات"
+  | "زيادة الوزن وقدرة التحمل"
+  | "حرق الدهون وانقاص الوزن";
 
 export interface ProductVariant {
   id: string;
@@ -24,7 +27,6 @@ export interface CartProduct {
 export interface CatalogProduct extends CartProduct {
   brand: string;
   name: string;
-  rating: number;
   badge?: string;
   inStock: boolean;
   type: string;
@@ -42,7 +44,5 @@ export interface SearchProduct {
 
 export interface Product extends CatalogProduct {
   description: string;
-  goal: TrainingGoal;
-  reviewCount: number;
   features: string[];
 }

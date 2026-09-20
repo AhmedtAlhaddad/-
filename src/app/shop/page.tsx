@@ -13,6 +13,7 @@ import {
   SHOP_PAGE_SIZE,
   areCategoryParamsCanonical,
   buildShopHref,
+  isProductScopeCanonical,
   normalizeShopQuery,
   toTrainingGoals,
 } from "@/lib/catalog-query";
@@ -53,6 +54,7 @@ export default async function Page({
     toTrainingGoals(query.goals),
     query.available,
     query.sort,
+    query.productScope,
     query.page,
     SHOP_PAGE_SIZE,
   );
@@ -77,6 +79,10 @@ export default async function Page({
     !areCategoryParamsCanonical(
       params.category,
       query.categories,
+    ) ||
+    !isProductScopeCanonical(
+      params.type,
+      query.productScope,
     )
   ) {
     redirect(

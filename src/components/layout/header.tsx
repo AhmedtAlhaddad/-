@@ -6,14 +6,14 @@ import { useCart } from "@/components/cart/cart-provider";
 import { BagIcon, CloseIcon, MenuIcon, SearchIcon } from "@/components/ui/icons";
 
 const nav = [
-  ["المكملات الغذائية", "/shop"],
-  ["أهداف التدريب", "/shop"],
-  ["الصحة العامة", "/shop"],
-  ["إكسسوارات اللياقة", "/shop"],
+  ["المكملات الغذائية", "/shop?type=supplements"],
+  ["اختر على حسب هدفك", "/#training-goals"],
+  ["تصفح الاصناف", "/#categories"],
+  ["إكسسوارات اللياقة", "/shop?type=accessories"],
 ];
 
 export function AnnouncementBar() {
-  return <div className="announcement">شحن مجاني للطلبات فوق 300 د.ل <span>•</span> منتجات أصلية 100%</div>;
+  return <div className="announcement">شحن مجاني للطلبات فوق 2000 د.ل <span>•</span> منتجات أصلية 100%</div>;
 }
 
 export function Header() {
