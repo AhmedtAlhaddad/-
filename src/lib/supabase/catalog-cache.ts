@@ -4,22 +4,34 @@ import {
 
 import {
   getBrands as fetchBrands,
+  getCatalogPage as fetchCatalogPage,
   getCategories as fetchCategories,
+  getFeaturedProducts as fetchFeaturedProducts,
   getProductBySlug as fetchProductBySlug,
-  getProducts as fetchProducts,
+  searchProducts as fetchSearchProducts,
 } from "@/lib/supabase/catalog";
+
+import type {
+  CatalogSort,
+} from "@/lib/catalog-query";
 
 import {
   PUBLIC_CATALOG_CACHE_TAG,
   PUBLIC_CATALOG_REVALIDATE_SECONDS,
 } from "@/lib/supabase/catalog-cache-key";
 
-const cachedProducts =
+const cachedFeaturedProducts =
   unstable_cache(
-    async () =>
-      fetchProducts(),
+    async (
+      limit: number,
+      excludeProductSlug?: string,
+    ) =>
+      fetchFeaturedProducts(
+        limit,
+        excludeProductSlug,
+      ),
     [
-      "public-catalog-products-v1",
+      "public-catalog-featured-products-v2",
     ],
     {
       revalidate:
@@ -30,6 +42,43 @@ const cachedProducts =
       ],
     },
   );
+
+const cachedCatalogPage = unstable_cache(
+  async (
+    categorySlugs: string[],
+    trainingGoals: string[],
+    available: boolean,
+    sort: CatalogSort,
+    page: number,
+    pageSize: number,
+  ) =>
+    fetchCatalogPage({
+      categorySlugs,
+      trainingGoals,
+      available,
+      sort,
+      page,
+      pageSize,
+    }),
+  ["public-catalog-list-v2"],
+  {
+    revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS,
+    tags: [PUBLIC_CATALOG_CACHE_TAG],
+  },
+);
+
+const cachedSearchProducts = unstable_cache(
+  async (
+    query: string,
+    page: number,
+    pageSize: number,
+  ) => fetchSearchProducts(query, page, pageSize),
+  ["public-catalog-search-v2"],
+  {
+    revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS,
+    tags: [PUBLIC_CATALOG_CACHE_TAG],
+  },
+);
 
 const cachedProductBySlug =
   unstable_cache(
@@ -86,8 +135,40 @@ const cachedCategories =
     },
   );
 
-export async function getProducts() {
-  return cachedProducts();
+export async function getFeaturedProducts(
+  limit = 4,
+  excludeProductSlug?: string,
+) {
+  return cachedFeaturedProducts(
+    limit,
+    excludeProductSlug,
+  );
+}
+
+export async function getCatalogPage(
+  categorySlugs: string[],
+  trainingGoals: string[],
+  available: boolean,
+  sort: CatalogSort,
+  page: number,
+  pageSize: number,
+) {
+  return cachedCatalogPage(
+    categorySlugs,
+    trainingGoals,
+    available,
+    sort,
+    page,
+    pageSize,
+  );
+}
+
+export async function searchProducts(
+  query: string,
+  page: number,
+  pageSize: number,
+) {
+  return cachedSearchProducts(query, page, pageSize);
 }
 
 export async function getProductBySlug(

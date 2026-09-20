@@ -11,7 +11,7 @@ import {
 
 import type { Brand } from "@/types/brand";
 import type { Category } from "@/types/category";
-import type { Product } from "@/types/product";
+import type { CatalogProduct } from "@/types/product";
 
 export function Hero() {
   return (
@@ -323,7 +323,7 @@ export function HomePage({
   brands,
   categories,
 }: {
-  products: Product[];
+  products: CatalogProduct[];
   brands: Brand[];
   categories: Category[];
 }) {

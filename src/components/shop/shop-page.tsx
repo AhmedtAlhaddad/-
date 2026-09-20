@@ -1,62 +1,34 @@
 "use client";
 
-import {
-  useMemo,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 import { ProductGrid } from "@/components/products/product-card";
+import { CloseIcon, FilterIcon } from "@/components/ui/icons";
 import {
-  CloseIcon,
-  FilterIcon,
-} from "@/components/ui/icons";
-
+  buildShopHref,
+  categoryOptions,
+  goalOptions,
+  type CatalogSort,
+  type ShopQuery,
+} from "@/lib/catalog-query";
 import type {
-  Product,
+  CatalogProduct,
   ProductCategory,
   TrainingGoal,
 } from "@/types/product";
 
-const categoryOptions: ProductCategory[] =
-  [
-    "بروتين",
-    "قبل التمرين",
-    "كرياتين",
-    "أحماض أمينية",
-    "إكسسوارات اللياقة",
-  ];
-
-const goalOptions: TrainingGoal[] =
-  [
-    "بناء العضلات",
-    "الطاقة والتحمل",
-    "إدارة الوزن",
-    "الاستشفاء",
-  ];
-
 function Filters({
-  categories,
-  goals,
-  available,
+  query,
   onCategory,
   onGoal,
   onAvailability,
   onClear,
 }: {
-  categories: ProductCategory[];
-  goals: TrainingGoal[];
-  available: boolean;
-
-  onCategory: (
-    value: ProductCategory,
-  ) => void;
-
-  onGoal: (
-    value: TrainingGoal,
-  ) => void;
-
+  query: ShopQuery;
+  onCategory: (value: ProductCategory) => void;
+  onGoal: (value: TrainingGoal) => void;
   onAvailability: () => void;
   onClear: () => void;
 }) {
@@ -64,258 +36,152 @@ function Filters({
     <div className="filters">
       <div className="filter-title">
         <b>تصفية النتائج</b>
-
-        <button
-          onClick={onClear}
-        >
-          مسح الكل
-        </button>
+        <button onClick={onClear}>مسح الكل</button>
       </div>
 
       <fieldset>
-        <legend>
-          الفئة التجارية
-        </legend>
-
-        {categoryOptions.map(
-          (item) => (
-            <label key={item}>
-              <input
-                type="checkbox"
-                checked={categories.includes(
-                  item,
-                )}
-                onChange={() =>
-                  onCategory(item)
-                }
-              />
-
-              <span>{item}</span>
-            </label>
-          ),
-        )}
+        <legend>الفئة التجارية</legend>
+        {categoryOptions.map((item) => (
+          <label key={item}>
+            <input
+              type="checkbox"
+              checked={query.categories.includes(item)}
+              onChange={() => onCategory(item)}
+            />
+            <span>{item}</span>
+          </label>
+        ))}
       </fieldset>
 
       <fieldset>
-        <legend>
-          هدف التدريب
-        </legend>
-
-        {goalOptions.map(
-          (item) => (
-            <label key={item}>
-              <input
-                type="checkbox"
-                checked={goals.includes(
-                  item,
-                )}
-                onChange={() =>
-                  onGoal(item)
-                }
-              />
-
-              <span>{item}</span>
-            </label>
-          ),
-        )}
+        <legend>هدف التدريب</legend>
+        {goalOptions.map((item) => (
+          <label key={item}>
+            <input
+              type="checkbox"
+              checked={query.goals.includes(item)}
+              onChange={() => onGoal(item)}
+            />
+            <span>{item}</span>
+          </label>
+        ))}
       </fieldset>
 
       <fieldset>
-        <legend>
-          التوفر
-        </legend>
-
+        <legend>التوفر</legend>
         <label>
           <input
             type="checkbox"
-            checked={available}
-            onChange={
-              onAvailability
-            }
+            checked={query.available}
+            onChange={onAvailability}
           />
-
-          <span>
-            متوفر حاليًا
-          </span>
+          <span>متوفر حاليًا</span>
         </label>
       </fieldset>
 
       <div className="member-card">
         <b>مزايا الأعضاء</b>
-
-        <p>
-          سجّل لتصلك العروض
-          التي يحددها المتجر.
-        </p>
-
-        <button>
-          سجّل الآن
-        </button>
+        <p>سجّل لتصلك العروض التي يحددها المتجر.</p>
+        <button>سجّل الآن</button>
       </div>
     </div>
   );
 }
 
+function pageItems(page: number, totalPages: number) {
+  return [...new Set([1, page - 1, page, page + 1, totalPages])]
+    .filter((item) => item > 0 && item <= totalPages)
+    .sort((a, b) => a - b);
+}
+
+function Pagination({
+  query,
+  totalPages,
+}: {
+  query: ShopQuery;
+  totalPages: number;
+}) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  const pages = pageItems(query.page, totalPages);
+
+  return (
+    <nav className="pagination" aria-label="صفحات المنتجات">
+      {pages.map((page, index) => (
+        <span key={page}>
+          {index > 0 && page - pages[index - 1] > 1 && (
+            <i aria-hidden="true">…</i>
+          )}
+          <Link
+            href={buildShopHref({ ...query, page })}
+            className={page === query.page ? "active" : ""}
+            aria-current={page === query.page ? "page" : undefined}
+          >
+            {page}
+          </Link>
+        </span>
+      ))}
+    </nav>
+  );
+}
+
 export function ShopPage({
   products,
-  initialCategory,
+  total,
+  totalPages,
+  query,
 }: {
-  products: Product[];
-  initialCategory?: ProductCategory;
+  products: CatalogProduct[];
+  total: number;
+  totalPages: number;
+  query: ShopQuery;
 }) {
-  const [
-    categories,
-    setCategories,
-  ] = useState<
-    ProductCategory[]
-  >(
-    initialCategory
-      ? [initialCategory]
-      : [],
-  );
+  const router = useRouter();
+  const [drawer, setDrawer] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const [goals, setGoals] =
-    useState<
-      TrainingGoal[]
-    >([]);
+  const navigate = (next: ShopQuery) => {
+    startTransition(() => {
+      router.push(buildShopHref(next));
+    });
+  };
 
-  const [
-    available,
-    setAvailable,
-  ] = useState(false);
+  const toggleCategory = (value: ProductCategory) => {
+    const categories = query.categories.includes(value)
+      ? query.categories.filter((item) => item !== value)
+      : [...query.categories, value];
+    navigate({ ...query, categories, page: 1 });
+  };
 
-  const [sort, setSort] =
-    useState("featured");
-
-  const [drawer, setDrawer] =
-    useState(false);
-
-  const toggle = <T,>(
-    setter: Dispatch<
-      SetStateAction<T[]>
-    >,
-    value: T,
-  ) => {
-    setter((current) =>
-      current.includes(value)
-        ? current.filter(
-            (item) =>
-              item !== value,
-          )
-        : [...current, value],
-    );
+  const toggleGoal = (value: TrainingGoal) => {
+    const goals = query.goals.includes(value)
+      ? query.goals.filter((item) => item !== value)
+      : [...query.goals, value];
+    navigate({ ...query, goals, page: 1 });
   };
 
   const clear = () => {
-    setCategories([]);
-    setGoals([]);
-    setAvailable(false);
+    navigate({
+      categories: [],
+      goals: [],
+      available: false,
+      sort: query.sort,
+      page: 1,
+    });
   };
 
-  const filtered =
-    useMemo(() => {
-      const result =
-        products.filter(
-          (product) =>
-            (!categories.length ||
-              categories.includes(
-                product.category,
-              )) &&
-            (!goals.length ||
-              goals.includes(
-                product.goal,
-              )) &&
-            (!available ||
-              product.inStock),
-        );
-
-      return [...result].sort(
-        (a, b) => {
-          const aPrice =
-            a.variants[0]?.price ??
-            0;
-
-          const bPrice =
-            b.variants[0]?.price ??
-            0;
-
-          if (
-            sort ===
-            "price-asc"
-          ) {
-            return (
-              aPrice -
-              bPrice
-            );
-          }
-
-          if (
-            sort ===
-            "price-desc"
-          ) {
-            return (
-              bPrice -
-              aPrice
-            );
-          }
-
-          if (
-            sort === "rating"
-          ) {
-            return (
-              b.rating -
-              a.rating
-            );
-          }
-
-          return (
-            Number(
-              Boolean(
-                b.badge,
-              ),
-            ) -
-            Number(
-              Boolean(
-                a.badge,
-              ),
-            )
-          );
-        },
-      );
-    }, [
-      products,
-      categories,
-      goals,
-      available,
-      sort,
-    ]);
-
-  const props = {
-    categories,
-    goals,
-    available,
-
-    onCategory: (
-      value: ProductCategory,
-    ) =>
-      toggle(
-        setCategories,
-        value,
-      ),
-
-    onGoal: (
-      value: TrainingGoal,
-    ) =>
-      toggle(
-        setGoals,
-        value,
-      ),
-
+  const filterProps = {
+    query,
+    onCategory: toggleCategory,
+    onGoal: toggleGoal,
     onAvailability: () =>
-      setAvailable(
-        (value) => !value,
-      ),
-
+      navigate({
+        ...query,
+        available: !query.available,
+        page: 1,
+      }),
     onClear: clear,
   };
 
@@ -323,151 +189,93 @@ export function ShopPage({
     <main>
       <section className="collection-hero">
         <div className="container">
-          <span>
-            الرئيسية /
-            المكملات الغذائية
-          </span>
-
-          <h1>
-            كل المكملات
-          </h1>
-
+          <span>الرئيسية / المكملات الغذائية</span>
+          <h1>كل المكملات</h1>
           <p>
-            استكشف مجموعتنا
-            المختارة من المكملات
-            الغذائية والإكسسوارات
-            لدعم احتياجاتك
-            الرياضية.
+            استكشف مجموعتنا المختارة من المكملات الغذائية والإكسسوارات
+            لدعم احتياجاتك الرياضية.
           </p>
         </div>
       </section>
 
-      <nav
-        className="collection-categories"
-        aria-label="فئات المنتجات"
-      >
+      <nav className="collection-categories" aria-label="فئات المنتجات">
         <div className="container">
           <button
-            className={
-              !categories.length
-                ? "active"
-                : ""
-            }
+            className={query.categories.length === 0 ? "active" : ""}
             onClick={() =>
-              setCategories([])
+              navigate({ ...query, categories: [], page: 1 })
             }
           >
             الكل
           </button>
-
-          {categoryOptions.map(
-            (category) => (
-              <button
-                className={
-                  categories.includes(
-                    category,
-                  )
-                    ? "active"
-                    : ""
-                }
-                key={category}
-                onClick={() =>
-                  toggle(
-                    setCategories,
-                    category,
-                  )
-                }
-              >
-                {category}
-              </button>
-            ),
-          )}
+          {categoryOptions.map((category) => (
+            <button
+              className={
+                query.categories.includes(category) ? "active" : ""
+              }
+              key={category}
+              onClick={() => toggleCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
         </div>
       </nav>
 
       <div className="container shop-toolbar">
         <span>
-          متوفر{" "}
-          <b>
-            {filtered.length}
-          </b>{" "}
-          منتجًا
+          متوفر <b>{total}</b> منتجًا
         </span>
-
         <div>
           <button
             className="filter-trigger"
-            onClick={() =>
-              setDrawer(true)
-            }
+            onClick={() => setDrawer(true)}
           >
             <FilterIcon />
             تصفية
           </button>
-
-          <label htmlFor="sort">
-            ترتيب حسب
-          </label>
-
+          <label htmlFor="sort">ترتيب حسب</label>
           <select
             id="sort"
-            value={sort}
+            value={query.sort}
             onChange={(event) =>
-              setSort(
-                event.target.value,
-              )
+              navigate({
+                ...query,
+                sort: event.target.value as CatalogSort,
+                page: 1,
+              })
             }
           >
-            <option value="featured">
-              المنتجات المميزة
-            </option>
-
+            <option value="featured">المنتجات المميزة</option>
             <option value="rating">
-              الأعلى تقييمًا
+              الأعلى تقييمًا (لا توجد تقييمات بعد)
             </option>
-
-            <option value="price-asc">
-              السعر: الأقل أولًا
-            </option>
-
-            <option value="price-desc">
-              السعر: الأعلى أولًا
-            </option>
+            <option value="price-asc">السعر: الأقل أولًا</option>
+            <option value="price-desc">السعر: الأعلى أولًا</option>
           </select>
         </div>
       </div>
 
       <div className="container shop-layout">
         <aside className="filter-sidebar">
-          <Filters
-            {...props}
-          />
+          <Filters {...filterProps} />
         </aside>
 
         <section
           className="shop-products"
           aria-live="polite"
+          aria-busy={isPending}
         >
-          {filtered.length ? (
-            <ProductGrid
-              items={filtered}
-            />
+          {products.length > 0 ? (
+            <>
+              <ProductGrid items={products} />
+              <Pagination query={query} totalPages={totalPages} />
+            </>
           ) : (
             <div className="empty-state">
-              <h2>
-                لا توجد منتجات
-                مطابقة
-              </h2>
-
-              <p>
-                جرّب إزالة بعض
-                عوامل التصفية.
-              </p>
-
-              <button
-                className="button primary"
-                onClick={clear}
-              >
+              <h2>لا توجد منتجات مطابقة</h2>
+              <p>جرّب إزالة بعض عوامل التصفية.</p>
+              <button className="button primary" onClick={clear}>
                 مسح عوامل التصفية
               </button>
             </div>
@@ -484,85 +292,46 @@ export function ShopPage({
         >
           <button
             className="drawer-backdrop"
-            onClick={() =>
-              setDrawer(false)
-            }
+            onClick={() => setDrawer(false)}
             aria-label="إغلاق"
           />
-
           <div className="filter-drawer">
             <button
               className="drawer-close"
-              onClick={() =>
-                setDrawer(false)
-              }
+              onClick={() => setDrawer(false)}
             >
               <CloseIcon />
               إغلاق
             </button>
-
-            <Filters
-              {...props}
-            />
-
+            <Filters {...filterProps} />
             <button
               className="button primary drawer-apply"
-              onClick={() =>
-                setDrawer(false)
-              }
+              onClick={() => setDrawer(false)}
             >
-              عرض{" "}
-              {filtered.length}{" "}
-              منتجات
+              عرض {total} منتجات
             </button>
           </div>
         </div>
       )}
 
       <section className="collection-copy container">
-        <h2>
-          المعايير الحقيقية في
-          عالم المكملات
-        </h2>
-
+        <h2>المعايير الحقيقية في عالم المكملات</h2>
         <p>
-          نختار منتجات عالم
-          اللياقة بعناية، مع
-          التركيز على جودة
-          المنتجات ووضوح
-          معلوماتها ومصدرها.
+          نختار منتجات عالم اللياقة بعناية، مع التركيز على جودة المنتجات
+          ووضوح معلوماتها ومصدرها.
         </p>
-
         <div>
           <article>
-            <b>
-              جودة مختارة
-            </b>
-
-            <span>
-              مراجعة معلومات
-              المنتجات
-            </span>
+            <b>جودة مختارة</b>
+            <span>مراجعة معلومات المنتجات</span>
           </article>
-
           <article>
-            <b>
-              توصيل سريع
-            </b>
-
-            <span>
-              تغليف آمن للطلبات
-            </span>
+            <b>توصيل سريع</b>
+            <span>تغليف آمن للطلبات</span>
           </article>
-
           <article>
-            <b>
-              دعم العملاء
-            </b>
-
-            <span>
-              مساعدة عند الحاجة
-            </span>
+            <b>دعم العملاء</b>
+            <span>مساعدة عند الحاجة</span>
           </article>
         </div>
       </section>

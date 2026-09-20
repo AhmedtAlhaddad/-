@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/icons";
 
 import { formatPrice } from "@/lib/utils";
-import type { Product } from "@/types/product";
+import type {
+  CatalogProduct,
+  Product,
+} from "@/types/product";
 
 export function ProductGallery({
   images,
@@ -124,7 +127,7 @@ export function ProductDetail({
   recommendations,
 }: {
   product: Product;
-  recommendations: Product[];
+  recommendations: CatalogProduct[];
 }) {
   const [variantId, setVariantId] =
     useState(

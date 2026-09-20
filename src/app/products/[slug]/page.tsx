@@ -6,7 +6,7 @@ import { ProductDetail } from "@/components/products/product-detail";
 
 import {
   getProductBySlug,
-  getProducts,
+  getFeaturedProducts,
 } from "@/lib/supabase/catalog-cache";
 
 type Props = {
@@ -70,13 +70,16 @@ export default async function Page({
 
   const [
     product,
-    products,
+    recommendations,
   ] = await Promise.all([
     getProductBySlug(
       slug,
     ),
 
-    getProducts(),
+    getFeaturedProducts(
+      4,
+      slug,
+    ),
   ]);
 
   if (
@@ -86,15 +89,6 @@ export default async function Page({
   ) {
     notFound();
   }
-
-  const recommendations =
-    products
-      .filter(
-        (item) =>
-          item.id !==
-          product.id,
-      )
-      .slice(0, 4);
 
   return (
     <StoreChrome>

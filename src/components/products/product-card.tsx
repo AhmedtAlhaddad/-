@@ -11,12 +11,12 @@ import {
 } from "@/components/ui/icons";
 
 import { formatPrice } from "@/lib/utils";
-import type { Product } from "@/types/product";
+import type { CatalogProduct } from "@/types/product";
 
 export function ProductCard({
   product,
 }: {
-  product: Product;
+  product: CatalogProduct;
 }) {
   const {
     addItem,
@@ -132,7 +132,7 @@ export function ProductCard({
 export function ProductGrid({
   items,
 }: {
-  items: Product[];
+  items: CatalogProduct[];
 }) {
   return (
     <div className="product-grid">

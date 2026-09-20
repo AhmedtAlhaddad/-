@@ -2,19 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-
+import { useRouter } from "next/navigation";
 import {
-  ArrowIcon,
-  CloseIcon,
-  SearchIcon,
-} from "@/components/ui/icons";
+  useState,
+  useTransition,
+  type FormEvent,
+} from "react";
 
+import { ArrowIcon, CloseIcon, SearchIcon } from "@/components/ui/icons";
+import { buildSearchHref } from "@/lib/catalog-query";
 import { formatPrice } from "@/lib/utils";
-
 import type { Brand } from "@/types/brand";
 import type { Category } from "@/types/category";
-import type { Product } from "@/types/product";
+import type { SearchProduct } from "@/types/product";
 
 const recentDefault = [
   "واي بروتين",
@@ -30,403 +30,252 @@ const popular = [
   "إكسسوارات اللياقة",
 ];
 
-export function SearchPage({
-  products,
-  categories,
-  brands,
+function pageItems(page: number, totalPages: number) {
+  return [...new Set([1, page - 1, page, page + 1, totalPages])]
+    .filter((item) => item > 0 && item <= totalPages)
+    .sort((a, b) => a - b);
+}
+
+function SearchForm({
+  query,
+  onSearch,
+  onClear,
 }: {
-  products: Product[];
-  categories: Category[];
-  brands: Brand[];
+  query: string;
+  onSearch: (value: string) => void;
+  onClear: () => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [recent, setRecent] =
-    useState(recentDefault);
+  const [draft, setDraft] = useState(query);
 
-  const normalized =
-    query.trim().toLowerCase();
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSearch(draft);
+  };
 
-  const results = useMemo(() => {
-    if (!normalized) {
-      return [];
+  const clear = () => {
+    setDraft("");
+    onClear();
+  };
+
+  return (
+    <form onSubmit={submit} role="search">
+      <button type="submit" aria-label="تنفيذ البحث">
+        <SearchIcon />
+      </button>
+      <label className="sr-only" htmlFor="main-search">
+        ابحث في المتجر
+      </label>
+      <input
+        id="main-search"
+        autoFocus
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder="ابحث عن المكملات، الإكسسوارات، أو العلامات..."
+      />
+      {draft && (
+        <button type="button" onClick={clear} aria-label="مسح البحث">
+          مسح
+        </button>
+      )}
+    </form>
+  );
+}
+
+export function SearchPage({
+  query,
+  products,
+  total,
+  page,
+  totalPages,
+  categoryMatches,
+  brandMatches,
+}: {
+  query: string;
+  products: SearchProduct[];
+  total: number;
+  page: number;
+  totalPages: number;
+  categoryMatches: Category[];
+  brandMatches: Brand[];
+}) {
+  const router = useRouter();
+  const [recent, setRecent] = useState(recentDefault);
+  const [isPending, startTransition] = useTransition();
+
+  const navigate = (value: string) => {
+    const href = buildSearchHref(value);
+    startTransition(() => router.push(href));
+  };
+
+  const applySearch = (value: string) => {
+    const normalized = value.trim().replace(/\s+/g, " ");
+
+    if (normalized) {
+      setRecent((current) =>
+        [
+          normalized,
+          ...current.filter((item) => item !== normalized),
+        ].slice(0, 5),
+      );
     }
 
-    return products.filter(
-      (product) => {
-        const searchable = [
-          product.name,
-          product.shortName,
-          product.brand,
-          product.category,
-          product.goal,
-          product.type,
-          product.description,
-          ...product.features,
-          ...product.variants.map(
-            (variant) =>
-              variant.flavor,
-          ),
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        return searchable.includes(
-          normalized,
-        );
-      },
-    );
-  }, [normalized, products]);
-
-  const categoryMatches =
-    useMemo(() => {
-      if (!normalized) {
-        return [];
-      }
-
-      return categories.filter(
-        (category) =>
-          [
-            category.name,
-            category.description,
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(normalized),
-      );
-    }, [
-      categories,
-      normalized,
-    ]);
-
-  const brandMatches =
-    useMemo(() => {
-      if (!normalized) {
-        return [];
-      }
-
-      return brands.filter(
-        (brand) =>
-          brand.name
-            .toLowerCase()
-            .includes(normalized),
-      );
-    }, [
-      brands,
-      normalized,
-    ]);
+    navigate(normalized);
+  };
 
   const hasResults =
-    results.length +
-      categoryMatches.length +
-      brandMatches.length >
-    0;
-
-  const applySearch = (
-    value: string,
-  ) => {
-    setQuery(value);
-
-    setRecent((current) => {
-      const next = [
-        value,
-        ...current.filter(
-          (item) =>
-            item !== value,
-        ),
-      ];
-
-      return next.slice(0, 5);
-    });
-  };
+    products.length + categoryMatches.length + brandMatches.length > 0;
 
   return (
     <main className="search-page">
       <header className="search-header">
-        <Link
-          href="/"
-          aria-label="إغلاق البحث"
-        >
+        <Link href="/" aria-label="إغلاق البحث">
           <CloseIcon />
         </Link>
 
-        <div>
-          <SearchIcon />
+        <SearchForm
+          key={query}
+          query={query}
+          onSearch={applySearch}
+          onClear={() => navigate("")}
+        />
 
-          <label
-            className="sr-only"
-            htmlFor="main-search"
-          >
-            ابحث في المتجر
-          </label>
-
-          <input
-            id="main-search"
-            autoFocus
-            value={query}
-            onChange={(event) =>
-              setQuery(
-                event.target.value,
-              )
-            }
-            placeholder="ابحث عن المكملات، الإكسسوارات، أو العلامات..."
-          />
-
-          {query && (
-            <button
-              onClick={() =>
-                setQuery("")
-              }
-              aria-label="مسح البحث"
-            >
-              مسح
-            </button>
-          )}
-        </div>
-
-        <Link
-          href="/"
-          className="search-back"
-          aria-label="العودة"
-        >
+        <Link href="/" className="search-back" aria-label="العودة">
           <ArrowIcon />
         </Link>
       </header>
 
-      <div className="search-body container">
-        {!normalized ? (
+      <div className="search-body container" aria-busy={isPending}>
+        {!query ? (
           <>
             <section className="search-block">
               <div className="search-block-title">
-                <h2>
-                  عمليات البحث الأخيرة
-                </h2>
-
-                {recent.length >
-                  0 && (
-                  <button
-                    onClick={() =>
-                      setRecent([])
-                    }
-                  >
-                    مسح الكل
-                  </button>
+                <h2>عمليات البحث الأخيرة</h2>
+                {recent.length > 0 && (
+                  <button onClick={() => setRecent([])}>مسح الكل</button>
                 )}
               </div>
-
-              {recent.length ? (
+              {recent.length > 0 ? (
                 <div className="search-chips">
-                  {recent.map(
-                    (item) => (
-                      <button
-                        onClick={() =>
-                          applySearch(
-                            item,
-                          )
-                        }
-                        key={item}
-                      >
-                        ↶ {item}
-                      </button>
-                    ),
-                  )}
+                  {recent.map((item) => (
+                    <button onClick={() => applySearch(item)} key={item}>
+                      ↶ {item}
+                    </button>
+                  ))}
                 </div>
               ) : (
-                <p className="muted">
-                  لا توجد عمليات بحث
-                  حديثة.
-                </p>
+                <p className="muted">لا توجد عمليات بحث حديثة.</p>
               )}
             </section>
 
             <section className="search-block">
-              <h2>
-                الكلمات الأكثر بحثًا
-              </h2>
-
+              <h2>الكلمات الأكثر بحثًا</h2>
               <div className="popular-grid">
-                {popular.map(
-                  (item) => (
-                    <button
-                      onClick={() =>
-                        applySearch(
-                          item,
-                        )
-                      }
-                      key={item}
-                    >
-                      {item}
-
-                      <span>
-                        ↗
-                      </span>
-                    </button>
-                  ),
-                )}
+                {popular.map((item) => (
+                  <button onClick={() => applySearch(item)} key={item}>
+                    {item}
+                    <span>↗</span>
+                  </button>
+                ))}
               </div>
             </section>
 
-            <Link
-              className="search-promo"
-              href="/shop"
-            >
+            <Link className="search-promo" href="/shop">
               <Image
                 src="/images/search-promo.jpg"
                 alt="استكشف منتجات عالم اللياقة"
                 fill
                 loading="lazy"
-                sizes="900px"
+                sizes="(max-width: 900px) 100vw, 850px"
               />
-
-              <span className="sr-only">
-                استكشف منتجات عالم
-                اللياقة
-              </span>
+              <span className="sr-only">استكشف منتجات عالم اللياقة</span>
             </Link>
           </>
         ) : hasResults ? (
           <section className="live-results">
             <div className="search-block-title">
-              <h1>
-                نتائج البحث عن “
-                {query}”
-              </h1>
-
-              <span>
-                {results.length} منتجات
-              </span>
+              <h1>نتائج البحث عن “{query}”</h1>
+              <span>{total} منتجات</span>
             </div>
 
-            {results.length >
-              0 && (
+            {products.length > 0 && (
               <div className="result-list">
-                {results.map(
-                  (product) => {
-                    const variant =
-                      product
-                        .variants[0];
-
-                    const image =
-                      product
-                        .images[0];
-
-                    return (
-                      <Link
-                        href={`/products/${product.slug}`}
-                        className="search-result"
-                        key={
-                          product.id
-                        }
-                      >
-                        <div>
-                          {image ? (
-                            <Image
-                              src={
-                                image
-                              }
-                              alt={
-                                product.name
-                              }
-                              fill
-                              sizes="90px"
-                            />
-                          ) : (
-                            <span className="muted">
-                              لا توجد صورة
-                            </span>
-                          )}
-                        </div>
-
-                        <span>
-                          <small>
-                            {
-                              product.brand
-                            }
-                          </small>
-
-                          <b>
-                            {
-                              product.shortName
-                            }
-                          </b>
-
-                          {variant && (
-                            <em>
-                              {formatPrice(
-                                variant.price,
-                              )}
-                            </em>
-                          )}
-                        </span>
-
-                        <ArrowIcon />
-                      </Link>
-                    );
-                  },
-                )}
+                {products.map((product) => (
+                  <Link
+                    href={`/products/${product.slug}`}
+                    className="search-result"
+                    key={product.id}
+                  >
+                    <div>
+                      {product.image ? (
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          loading="lazy"
+                          sizes="90px"
+                        />
+                      ) : (
+                        <span className="muted">لا توجد صورة</span>
+                      )}
+                    </div>
+                    <span>
+                      <small>{product.brand}</small>
+                      <b>{product.shortName}</b>
+                      <em>{formatPrice(product.price)}</em>
+                    </span>
+                    <ArrowIcon />
+                  </Link>
+                ))}
               </div>
             )}
 
-            {(categoryMatches.length >
-              0 ||
-              brandMatches.length >
-                0) && (
+            {(categoryMatches.length > 0 || brandMatches.length > 0) && (
               <div className="search-taxonomy">
-                {categoryMatches.map(
-                  (item) => (
-                    <Link
-                      href={
-                        item.href
-                      }
-                      key={`${item.name}-${item.href}`}
-                    >
-                      فئة:{" "}
-                      {item.name}
-                    </Link>
-                  ),
-                )}
-
-                {brandMatches.map(
-                  (item) => (
-                    <Link
-                      href="/shop"
-                      key={item.id}
-                    >
-                      علامة:{" "}
-                      {item.name}
-                    </Link>
-                  ),
-                )}
+                {categoryMatches.map((item) => (
+                  <Link href={item.href} key={`${item.name}-${item.href}`}>
+                    فئة: {item.name}
+                  </Link>
+                ))}
+                {brandMatches.map((item) => (
+                  <Link href="/shop" key={item.id}>
+                    علامة: {item.name}
+                  </Link>
+                ))}
               </div>
+            )}
+
+            {totalPages > 1 && (
+              <nav className="pagination" aria-label="صفحات نتائج البحث">
+                {pageItems(page, totalPages).map((item, index, pages) => (
+                  <span key={item}>
+                    {index > 0 && item - pages[index - 1] > 1 && (
+                      <i aria-hidden="true">…</i>
+                    )}
+                    <Link
+                      href={buildSearchHref(query, item)}
+                      className={item === page ? "active" : ""}
+                      aria-current={item === page ? "page" : undefined}
+                    >
+                      {item}
+                    </Link>
+                  </span>
+                ))}
+              </nav>
             )}
           </section>
         ) : (
           <section className="empty-state search-empty">
             <SearchIcon />
-
-            <h1>
-              لم نجد ما تبحث عنه
-            </h1>
-
-            <p>
-              تأكد من كتابة الكلمة أو
-              جرّب عبارة أقصر.
-            </p>
-
-            <button
-              className="button primary"
-              onClick={() =>
-                setQuery("")
-              }
-            >
+            <h1>لم نجد ما تبحث عنه</h1>
+            <p>تأكد من كتابة الكلمة أو جرّب عبارة أقصر.</p>
+            <button className="button primary" onClick={() => navigate("")}>
               العودة للاقتراحات
             </button>
           </section>
         )}
       </div>
 
-      <footer className="search-footer">
-        عالم اللياقة © 2026
-      </footer>
+      <footer className="search-footer">عالم اللياقة © 2026</footer>
     </main>
   );
 }

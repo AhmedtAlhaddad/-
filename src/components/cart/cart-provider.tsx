@@ -9,14 +9,14 @@ import {
 } from "react";
 
 import type { CartItem } from "@/types/cart";
-import type { Product } from "@/types/product";
+import type { CartProduct } from "@/types/product";
 
 interface CartContextValue {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
   addItem: (
-    product: Product,
+    product: CartProduct,
     variantId: string,
     quantity?: number,
   ) => void;
@@ -34,7 +34,7 @@ export function CartProvider({
   const [items, setItems] = useState<CartItem[]>([]);
 
   const addItem = (
-    product: Product,
+    product: CartProduct,
     variantId: string,
     quantity = 1,
   ) => {

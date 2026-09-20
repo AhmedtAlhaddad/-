@@ -4,7 +4,7 @@ import { StoreChrome } from "@/components/layout/footer";
 import {
   getBrands,
   getCategories,
-  getProducts,
+  getFeaturedProducts,
 } from "@/lib/supabase/catalog-cache";
 
 export const revalidate =
@@ -16,7 +16,7 @@ export default async function Page() {
     brands,
     categories,
   ] = await Promise.all([
-    getProducts(),
+    getFeaturedProducts(4),
     getBrands(),
     getCategories(),
   ]);

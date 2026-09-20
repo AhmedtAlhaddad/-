@@ -12,21 +12,37 @@ export interface ProductVariant {
   images: string[];
 }
 
-export interface Product {
+export interface CartProduct {
+  id: string;
+  slug: string;
+  shortName: string;
+  category: ProductCategory;
+  images: string[];
+  variants: ProductVariant[];
+}
+
+export interface CatalogProduct extends CartProduct {
+  brand: string;
+  name: string;
+  rating: number;
+  badge?: string;
+  inStock: boolean;
+  type: string;
+}
+
+export interface SearchProduct {
   id: string;
   slug: string;
   brand: string;
   name: string;
   shortName: string;
+  image?: string;
+  price: number;
+}
+
+export interface Product extends CatalogProduct {
   description: string;
-  category: ProductCategory;
   goal: TrainingGoal;
-  rating: number;
   reviewCount: number;
-  images: string[];
-  badge?: string;
-  inStock: boolean;
-  type: string;
   features: string[];
-  variants: ProductVariant[];
 }

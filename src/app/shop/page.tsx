@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { StoreChrome } from "@/components/layout/footer";
 import { ShopPage } from "@/components/shop/shop-page";
 
 import {
-  getProducts,
+  getCatalogPage,
 } from "@/lib/supabase/catalog-cache";
 
-import type {
-  ProductCategory,
-} from "@/types/product";
+import {
+  SHOP_PAGE_SIZE,
+  buildShopHref,
+  normalizeShopQuery,
+  toCategorySlugs,
+  toTrainingGoals,
+} from "@/lib/catalog-query";
 
 export const metadata: Metadata = {
   title: "كل المكملات",
@@ -21,54 +26,42 @@ export const metadata: Metadata = {
 export const revalidate =
   300;
 
-const validCategories: ProductCategory[] = [
-  "بروتين",
-  "قبل التمرين",
-  "كرياتين",
-  "أحماض أمينية",
-  "إكسسوارات اللياقة",
-];
-
 type Props = {
-  searchParams: Promise<{
-    category?:
-      | string
-      | string[];
-  }>;
+  searchParams: Promise<
+    Record<string, string | string[] | undefined>
+  >;
 };
 
 export default async function Page({
   searchParams,
 }: Props) {
-  const [
-    products,
-    params,
-  ] = await Promise.all([
-    getProducts(),
-    searchParams,
-  ]);
+  const params = await searchParams;
+  const query = normalizeShopQuery(params);
+  const catalog = await getCatalogPage(
+    toCategorySlugs(query.categories),
+    toTrainingGoals(query.goals),
+    query.available,
+    query.sort,
+    query.page,
+    SHOP_PAGE_SIZE,
+  );
 
-  const rawCategory =
-    Array.isArray(
-      params.category,
-    )
-      ? params.category[0]
-      : params.category;
-
-  const initialCategory =
-    validCategories.find(
-      (category) =>
-        category ===
-        rawCategory,
+  if (catalog.page !== query.page) {
+    redirect(
+      buildShopHref({
+        ...query,
+        page: catalog.page,
+      }),
     );
+  }
 
   return (
     <StoreChrome>
       <ShopPage
-        products={products}
-        initialCategory={
-          initialCategory
-        }
+        products={catalog.products}
+        total={catalog.total}
+        totalPages={catalog.totalPages}
+        query={query}
       />
     </StoreChrome>
   );
