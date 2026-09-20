@@ -4,3 +4,12 @@ export interface Category {
   image: string;
   href: string;
 }
+
+export interface CatalogCategory extends Category {
+  slug: string;
+}
+
+export interface ShopCategoryOption {
+  slug: string;
+  label: string;
+}

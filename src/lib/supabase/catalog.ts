@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 
 import type { Brand } from "@/types/brand";
-import type { Category } from "@/types/category";
+import type { CatalogCategory } from "@/types/category";
 import type {
   CatalogProduct,
   Product,
@@ -1016,7 +1016,7 @@ export async function getBrands(): Promise<
 }
 
 export async function getCategories(): Promise<
-  Category[]
+  CatalogCategory[]
 > {
   const { data, error } =
     await supabase
@@ -1042,7 +1042,7 @@ export async function getCategories(): Promise<
         },
       )
       .order(
-        "name_ar",
+        "slug",
         {
           ascending: true,
         },
@@ -1062,14 +1062,14 @@ export async function getCategories(): Promise<
       const category =
         row as CatalogCategoryRow;
 
-      const filterCategory =
-        mapCategory(
-          category.slug,
-        );
-
       return {
+        slug:
+          category.slug,
+
         name:
-          category.name_ar,
+          category.name_ar.trim() ||
+          category.name_en?.trim() ||
+          category.slug,
 
         description:
           category.description_ar ??
@@ -1085,7 +1085,7 @@ export async function getCategories(): Promise<
 
         href:
           `/shop?category=${encodeURIComponent(
-            filterCategory,
+            category.slug,
           )}`,
       };
     },

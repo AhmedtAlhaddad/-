@@ -6,13 +6,14 @@ import { ShopPage } from "@/components/shop/shop-page";
 
 import {
   getCatalogPage,
+  getCategories,
 } from "@/lib/supabase/catalog-cache";
 
 import {
   SHOP_PAGE_SIZE,
+  areCategoryParamsCanonical,
   buildShopHref,
   normalizeShopQuery,
-  toCategorySlugs,
   toTrainingGoals,
 } from "@/lib/catalog-query";
 
@@ -35,10 +36,20 @@ type Props = {
 export default async function Page({
   searchParams,
 }: Props) {
-  const params = await searchParams;
-  const query = normalizeShopQuery(params);
+  const [params, categories] = await Promise.all([
+    searchParams,
+    getCategories(),
+  ]);
+  const categoryOptions = categories.map((category) => ({
+    slug: category.slug,
+    label: category.name,
+  }));
+  const query = normalizeShopQuery(
+    params,
+    categoryOptions.map((category) => category.slug),
+  );
   const catalog = await getCatalogPage(
-    toCategorySlugs(query.categories),
+    query.categories,
     toTrainingGoals(query.goals),
     query.available,
     query.sort,
@@ -46,7 +57,13 @@ export default async function Page({
     SHOP_PAGE_SIZE,
   );
 
-  if (catalog.page !== query.page) {
+  if (
+    catalog.page !== query.page ||
+    !areCategoryParamsCanonical(
+      params.category,
+      query.categories,
+    )
+  ) {
     redirect(
       buildShopHref({
         ...query,
@@ -62,6 +79,7 @@ export default async function Page({
         total={catalog.total}
         totalPages={catalog.totalPages}
         query={query}
+        categories={categoryOptions}
       />
     </StoreChrome>
   );

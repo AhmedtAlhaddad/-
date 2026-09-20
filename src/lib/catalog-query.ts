@@ -1,18 +1,9 @@
 import type {
-  ProductCategory,
   TrainingGoal,
 } from "@/types/product";
 
 export const SHOP_PAGE_SIZE = 24;
 export const SEARCH_PAGE_SIZE = 20;
-
-export const categoryOptions: ProductCategory[] = [
-  "بروتين",
-  "قبل التمرين",
-  "كرياتين",
-  "أحماض أمينية",
-  "إكسسوارات اللياقة",
-];
 
 export const goalOptions: TrainingGoal[] = [
   "بناء العضلات",
@@ -32,7 +23,7 @@ export type CatalogSort =
   (typeof sortOptions)[number];
 
 export type ShopQuery = {
-  categories: ProductCategory[];
+  categories: string[];
   goals: TrainingGoal[];
   available: boolean;
   sort: CatalogSort;
@@ -43,17 +34,6 @@ type RawSearchParams = Record<
   string,
   string | string[] | undefined
 >;
-
-const categorySlugs: Record<
-  ProductCategory,
-  string[]
-> = {
-  "بروتين": ["protein"],
-  "قبل التمرين": ["pre-workout"],
-  "كرياتين": ["creatine"],
-  "أحماض أمينية": ["amino-acids", "bcaa"],
-  "إكسسوارات اللياقة": ["fitness-accessories", "accessories"],
-};
 
 const trainingGoals: Record<
   TrainingGoal,
@@ -101,6 +81,7 @@ export function normalizePage(
 
 export function normalizeShopQuery(
   params: RawSearchParams,
+  activeCategorySlugs: string[],
 ): ShopQuery {
   const requestedCategories = values(
     params.category,
@@ -111,7 +92,7 @@ export function normalizeShopQuery(
     : params.sort;
 
   return {
-    categories: categoryOptions.filter((item) =>
+    categories: activeCategorySlugs.filter((item) =>
       requestedCategories.includes(item),
     ),
     goals: goalOptions.filter((item) =>
@@ -126,6 +107,20 @@ export function normalizeShopQuery(
   };
 }
 
+export function areCategoryParamsCanonical(
+  value: string | string[] | undefined,
+  categories: string[],
+) {
+  const requested = values(value);
+
+  return (
+    requested.length === categories.length &&
+    requested.every(
+      (category, index) => category === categories[index],
+    )
+  );
+}
+
 export function normalizeSearchQuery(
   value: string | string[] | undefined,
 ) {
@@ -135,14 +130,6 @@ export function normalizeSearchQuery(
     .trim()
     .replace(/\s+/g, " ")
     .slice(0, 100);
-}
-
-export function toCategorySlugs(
-  categories: ProductCategory[],
-) {
-  return categories.flatMap(
-    (category) => categorySlugs[category],
-  );
 }
 
 export function toTrainingGoals(

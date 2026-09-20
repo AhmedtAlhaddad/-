@@ -8,26 +8,27 @@ import { ProductGrid } from "@/components/products/product-card";
 import { CloseIcon, FilterIcon } from "@/components/ui/icons";
 import {
   buildShopHref,
-  categoryOptions,
   goalOptions,
   type CatalogSort,
   type ShopQuery,
 } from "@/lib/catalog-query";
+import type { ShopCategoryOption } from "@/types/category";
 import type {
   CatalogProduct,
-  ProductCategory,
   TrainingGoal,
 } from "@/types/product";
 
 function Filters({
   query,
+  categories,
   onCategory,
   onGoal,
   onAvailability,
   onClear,
 }: {
   query: ShopQuery;
-  onCategory: (value: ProductCategory) => void;
+  categories: ShopCategoryOption[];
+  onCategory: (value: string) => void;
   onGoal: (value: TrainingGoal) => void;
   onAvailability: () => void;
   onClear: () => void;
@@ -41,14 +42,14 @@ function Filters({
 
       <fieldset>
         <legend>الفئة التجارية</legend>
-        {categoryOptions.map((item) => (
-          <label key={item}>
+        {categories.map((item) => (
+          <label key={item.slug}>
             <input
               type="checkbox"
-              checked={query.categories.includes(item)}
-              onChange={() => onCategory(item)}
+              checked={query.categories.includes(item.slug)}
+              onChange={() => onCategory(item.slug)}
             />
-            <span>{item}</span>
+            <span>{item.label}</span>
           </label>
         ))}
       </fieldset>
@@ -132,11 +133,13 @@ export function ShopPage({
   total,
   totalPages,
   query,
+  categories,
 }: {
   products: CatalogProduct[];
   total: number;
   totalPages: number;
   query: ShopQuery;
+  categories: ShopCategoryOption[];
 }) {
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
@@ -148,7 +151,7 @@ export function ShopPage({
     });
   };
 
-  const toggleCategory = (value: ProductCategory) => {
+  const toggleCategory = (value: string) => {
     const categories = query.categories.includes(value)
       ? query.categories.filter((item) => item !== value)
       : [...query.categories, value];
@@ -174,6 +177,7 @@ export function ShopPage({
 
   const filterProps = {
     query,
+    categories,
     onCategory: toggleCategory,
     onGoal: toggleGoal,
     onAvailability: () =>
@@ -208,15 +212,15 @@ export function ShopPage({
           >
             الكل
           </button>
-          {categoryOptions.map((category) => (
+          {categories.map((category) => (
             <button
               className={
-                query.categories.includes(category) ? "active" : ""
+                query.categories.includes(category.slug) ? "active" : ""
               }
-              key={category}
-              onClick={() => toggleCategory(category)}
+              key={category.slug}
+              onClick={() => toggleCategory(category.slug)}
             >
-              {category}
+              {category.label}
             </button>
           ))}
         </div>

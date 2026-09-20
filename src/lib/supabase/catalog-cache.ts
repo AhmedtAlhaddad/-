@@ -123,7 +123,7 @@ const cachedCategories =
     async () =>
       fetchCategories(),
     [
-      "public-catalog-categories-v1",
+      "public-catalog-categories-v2",
     ],
     {
       revalidate:

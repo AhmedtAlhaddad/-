@@ -1,10 +1,19 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
 
-import { createClient } from "@/lib/supabase/browser";
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
+
+import type {
+  ReactNode,
+} from "react";
+
+import {
+  createClient,
+} from "@/lib/supabase/browser";
 
 import styles from "./admin-shell.module.css";
 
@@ -18,6 +27,16 @@ const navItems = [
     href: "/admin/products",
     label: "المنتجات",
     icon: "▦",
+  },
+  {
+    href: "/admin/brands",
+    label: "العلامات",
+    icon: "B",
+  },
+  {
+    href: "/admin/categories",
+    label: "التصنيفات",
+    icon: "C",
   },
   {
     href: "/admin/orders",
@@ -50,11 +69,16 @@ function isActive(
   pathname: string,
   href: string,
 ) {
-  if (href === "/admin") {
-    return pathname === "/admin";
+  if (
+    href === "/admin"
+  ) {
+    return pathname ===
+      "/admin";
   }
 
-  return pathname.startsWith(href);
+  return pathname.startsWith(
+    href,
+  );
 }
 
 export function AdminShell({
@@ -62,32 +86,66 @@ export function AdminShell({
 }: {
   children: ReactNode;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname =
+    usePathname();
 
-  if (pathname === "/admin/login") {
+  const router =
+    useRouter();
+
+  if (
+    pathname ===
+    "/admin/login"
+  ) {
     return children;
   }
 
   async function signOut() {
-    const supabase = createClient();
+    const supabase =
+      createClient();
 
     await supabase.auth.signOut();
 
-    router.replace("/admin/login");
+    router.replace(
+      "/admin/login",
+    );
+
     router.refresh();
   }
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.layout}>
-        <aside className={styles.sidebar}>
-          <div className={styles.brand}>
-            <div className={styles.brandMark}>
+    <div
+      className={
+        styles.shell
+      }
+    >
+      <div
+        className={
+          styles.layout
+        }
+      >
+        <aside
+          className={
+            styles.sidebar
+          }
+        >
+          <div
+            className={
+              styles.brand
+            }
+          >
+            <div
+              className={
+                styles.brandMark
+              }
+            >
               AL
             </div>
 
-            <div className={styles.brandText}>
+            <div
+              className={
+                styles.brandText
+              }
+            >
               <strong>
                 عالم اللياقة
               </strong>
@@ -98,58 +156,103 @@ export function AdminShell({
             </div>
           </div>
 
-          <nav className={styles.nav}>
-            <div className={styles.navLabel}>
+          <nav
+            className={
+              styles.nav
+            }
+          >
+            <div
+              className={
+                styles.navLabel
+              }
+            >
               إدارة المتجر
             </div>
 
-            {navItems.map((item) => {
-              const active = isActive(
-                pathname,
-                item.href,
-              );
+            {navItems.map(
+              (item) => {
+                const active =
+                  isActive(
+                    pathname,
+                    item.href,
+                  );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${styles.navLink} ${
-                    active
-                      ? styles.navLinkActive
-                      : ""
-                  }`}
-                >
-                  <span className={styles.icon}>
-                    {item.icon}
-                  </span>
+                return (
+                  <Link
+                    key={
+                      item.href
+                    }
+                    href={
+                      item.href
+                    }
+                    className={`${styles.navLink} ${
+                      active
+                        ? styles.navLinkActive
+                        : ""
+                    }`}
+                  >
+                    <span
+                      className={
+                        styles.icon
+                      }
+                    >
+                      {
+                        item.icon
+                      }
+                    </span>
 
-                  {item.label}
-                </Link>
-              );
-            })}
+                    {
+                      item.label
+                    }
+                  </Link>
+                );
+              },
+            )}
           </nav>
 
-          <div className={styles.sidebarBottom}>
+          <div
+            className={
+              styles.sidebarBottom
+            }
+          >
             <Link
               href="/"
-              className={styles.storeLink}
+              className={
+                styles.storeLink
+              }
             >
               عرض المتجر ↗
             </Link>
 
             <button
               type="button"
-              className={styles.signOut}
-              onClick={signOut}
+              className={
+                styles.signOut
+              }
+              onClick={
+                signOut
+              }
             >
               تسجيل الخروج
             </button>
           </div>
         </aside>
 
-        <div className={styles.main}>
-          <header className={styles.topbar}>
-            <div className={styles.topbarTitle}>
+        <div
+          className={
+            styles.main
+          }
+        >
+          <header
+            className={
+              styles.topbar
+            }
+          >
+            <div
+              className={
+                styles.topbarTitle
+              }
+            >
               <strong>
                 إدارة عالم اللياقة
               </strong>
@@ -159,35 +262,56 @@ export function AdminShell({
               </span>
             </div>
 
-            <div className={styles.adminBadge}>
+            <div
+              className={
+                styles.adminBadge
+              }
+            >
               Admin
             </div>
           </header>
 
-          <nav className={styles.mobileMenu}>
-            {navItems.map((item) => {
-              const active = isActive(
-                pathname,
-                item.href,
-              );
+          <nav
+            className={
+              styles.mobileMenu
+            }
+          >
+            {navItems.map(
+              (item) => {
+                const active =
+                  isActive(
+                    pathname,
+                    item.href,
+                  );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${styles.navLink} ${
-                    active
-                      ? styles.navLinkActive
-                      : ""
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={
+                      item.href
+                    }
+                    href={
+                      item.href
+                    }
+                    className={`${styles.navLink} ${
+                      active
+                        ? styles.navLinkActive
+                        : ""
+                    }`}
+                  >
+                    {
+                      item.label
+                    }
+                  </Link>
+                );
+              },
+            )}
           </nav>
 
-          <div className={styles.content}>
+          <div
+            className={
+              styles.content
+            }
+          >
             {children}
           </div>
         </div>
