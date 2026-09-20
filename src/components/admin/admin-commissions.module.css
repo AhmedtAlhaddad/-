@@ -1,0 +1,451 @@
+.statsValue {
+  font-size: 22px !important;
+}
+
+.section {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: #101614;
+  display: grid;
+  gap: 15px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.sectionHeading div {
+  display: grid;
+  gap: 5px;
+}
+
+.sectionHeading strong {
+  color: #f4f8f6;
+  font-size: 16px;
+}
+
+.sectionHeading span {
+  max-width: 720px;
+  color: #778680;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.payableGroups,
+.historyList {
+  display: grid;
+  gap: 10px;
+}
+
+.payableGroup,
+.payoutCard {
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0c1210;
+}
+
+.payableGroup[open] {
+  border-color: rgba(34, 207, 145, 0.2);
+}
+
+.payableSummary {
+  min-height: 70px;
+  padding: 13px 15px;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.payableSummary::-webkit-details-marker {
+  display: none;
+}
+
+.payableIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.payableIdentity strong {
+  color: #eaf3ef;
+  font-size: 12px;
+}
+
+.payableIdentity span {
+  color: #6e7d77;
+  font-size: 10px;
+}
+
+.payableTotal {
+  color: #55e5ae;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.payoutForm {
+  padding: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  gap: 13px;
+}
+
+.selectionTools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.selectionTools span {
+  color: #80908a;
+  font-size: 11px;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: #55e5ae;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.commissionChoices {
+  max-height: 260px;
+  overflow: auto;
+  display: grid;
+  gap: 7px;
+}
+
+.commissionChoice {
+  padding: 10px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.018);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.commissionChoice input {
+  width: 16px;
+  height: 16px;
+  accent-color: #22cf91;
+}
+
+.choiceText {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.choiceText strong,
+.choiceText span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choiceText strong {
+  color: #dce8e3;
+  font-size: 11px;
+}
+
+.choiceText span {
+  color: #687770;
+  font-size: 9px;
+}
+
+.choiceAmount {
+  color: #cddad5;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.payoutFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.payoutFields label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.payoutFields span {
+  color: #82918b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.payoutFields input,
+.payoutFields textarea {
+  width: 100%;
+  min-width: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  outline: none;
+  background: #090e0c;
+  color: #f4f8f6;
+  font: inherit;
+  font-size: 11px;
+}
+
+.payoutFields input {
+  min-height: 41px;
+  padding: 0 11px;
+}
+
+.payoutFields textarea {
+  min-height: 76px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.payoutFields input:focus,
+.payoutFields textarea:focus {
+  border-color: rgba(34, 207, 145, 0.45);
+}
+
+.payoutFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.payoutFooter div {
+  display: grid;
+  gap: 3px;
+}
+
+.payoutFooter span {
+  color: #75847e;
+  font-size: 10px;
+}
+
+.payoutFooter strong {
+  color: #55e5ae;
+  font-size: 15px;
+}
+
+.payoutButton {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 11px;
+  cursor: pointer;
+  background: #22cf91;
+  color: #06120e;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.payoutButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.notice,
+.error,
+.success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.notice {
+  color: #d9bd88;
+  border: 1px solid rgba(229, 194, 124, 0.13);
+  background: rgba(229, 194, 124, 0.05);
+}
+
+.error {
+  color: #ff9f9f;
+  background: rgba(255, 92, 92, 0.08);
+}
+
+.success {
+  color: #72e9bb;
+  background: rgba(34, 207, 145, 0.08);
+}
+
+.statusPending,
+.statusApproved,
+.statusPaid,
+.statusVoid,
+.orderStatus {
+  min-height: 27px;
+  padding: 0 9px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.statusPending {
+  color: #e5c27c;
+  border: 1px solid rgba(229, 194, 124, 0.16);
+  background: rgba(229, 194, 124, 0.06);
+}
+
+.statusApproved {
+  color: #55e5ae;
+  border: 1px solid rgba(34, 207, 145, 0.18);
+  background: rgba(34, 207, 145, 0.07);
+}
+
+.statusPaid {
+  color: #8ec8ff;
+  border: 1px solid rgba(84, 163, 236, 0.16);
+  background: rgba(84, 163, 236, 0.06);
+}
+
+.statusVoid {
+  color: #a1aca8;
+  border: 1px solid rgba(161, 172, 168, 0.12);
+  background: rgba(161, 172, 168, 0.05);
+}
+
+.orderStatus {
+  color: #98a59f;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.commissionAmount {
+  color: #55e5ae !important;
+  font-weight: 900;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.detail {
+  min-width: 0;
+  padding: 11px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.022);
+  display: grid;
+  gap: 5px;
+}
+
+.detail span {
+  color: #697872;
+  font-size: 9px;
+}
+
+.detail strong {
+  overflow: hidden;
+  color: #dce6e2;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payoutCard {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.payoutHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.payoutHeader div {
+  display: grid;
+  gap: 4px;
+}
+
+.payoutHeader strong {
+  color: #eaf3ef;
+  font-size: 12px;
+}
+
+.payoutHeader span,
+.payoutMeta {
+  color: #6e7d77;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.payoutAmount {
+  color: #8ec8ff !important;
+  font-size: 14px !important;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.empty {
+  min-height: 120px;
+  padding: 24px;
+  border-radius: 13px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  color: #71807a;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .detailGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .sectionHeading,
+  .payableSummary,
+  .payoutFooter,
+  .payoutHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payoutFields,
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .payoutButton {
+    width: 100%;
+  }
+
+  .commissionChoice {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .choiceAmount {
+    grid-column: 2;
+  }
+}
