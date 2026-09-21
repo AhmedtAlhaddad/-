@@ -407,7 +407,7 @@ export async function PATCH(
         "product_variants",
       )
       .select(
-        "id, stock_quantity",
+        "id",
       )
       .eq(
         "product_id",
@@ -431,19 +431,6 @@ export async function PATCH(
       ).map(
         (variant) =>
           variant.id,
-      ),
-    );
-
-  const stockByVariantId =
-    new Map(
-      (
-        existingVariants ??
-        []
-      ).map(
-        (variant) => [
-          variant.id,
-          variant.stock_quantity,
-        ] as const,
       ),
     );
 
@@ -835,51 +822,37 @@ export async function PATCH(
 
   const {
     error: productError,
-  } =
-    await supabase
-      .from("products")
-      .update({
+  } = await supabase.rpc(
+    "update_admin_product",
+    {
+      p_product_id: id,
+      p_product: {
         slug,
-
-        name_ar:
-          nameAr,
-
+        name_ar: nameAr,
         name_en:
           nullableText(
             payload.name_en,
           ),
-
         short_description_ar:
           shortDescription,
-
         full_description_ar:
           nullableText(
             payload.full_description_ar,
           ),
-
         nutrition_facts:
           nutritionFacts,
-
         usage_instructions:
           usageInstructions,
-
         brand_id:
           brandId,
-
         category_id:
           categoryId,
-
         product_type:
           productType,
-
-        training_goal:
-          null,
-
         badge_label_ar:
           nullableText(
             payload.badge_label_ar,
           ),
-
         highlights:
           Array.isArray(
             payload.highlights,
@@ -893,17 +866,17 @@ export async function PATCH(
                   Boolean,
                 )
             : [],
-
         status,
-
         featured:
           payload.featured ===
           true,
-      })
-      .eq(
-        "id",
-        id,
-      );
+      },
+      p_variants:
+        normalized,
+      p_goals:
+        trainingGoals,
+    },
+  );
 
   if (
     productError
@@ -914,193 +887,6 @@ export async function PATCH(
         productError.message,
       ),
     );
-  }
-
-  const {
-    error: goalsError,
-  } = await supabase.rpc(
-    "set_product_training_goals",
-    {
-      p_product_id: id,
-      p_goals: trainingGoals,
-    },
-  );
-
-  if (goalsError) {
-    revalidatePublicCatalog();
-
-    return errorResponse(
-      "تم حفظ بيانات المنتج، لكن تعذر حفظ أهداف التدريب. حدّث الصفحة وحاول مجددًا.",
-      500,
-    );
-  }
-
-  for (
-    const variant of
-    normalized
-  ) {
-    const {
-      id: variantId,
-      stock_quantity:
-        requestedStock,
-      ...values
-    } = variant;
-
-    if (variantId) {
-      const {
-        error,
-      } =
-        await supabase
-          .from(
-            "product_variants",
-          )
-          .update(
-            values,
-          )
-          .eq(
-            "id",
-            variantId,
-          )
-          .eq(
-            "product_id",
-            id,
-          );
-
-      if (error) {
-        revalidatePublicCatalog();
-
-        return errorResponse(
-          postgresMessage(
-            error.code,
-            error.message,
-          ),
-        );
-      }
-
-      const currentStock =
-        stockByVariantId.get(
-          variantId,
-        );
-
-      if (
-        currentStock ===
-        undefined
-      ) {
-        revalidatePublicCatalog();
-
-        return errorResponse(
-          "تعذر التحقق من مخزون الـVariant.",
-          500,
-        );
-      }
-
-      const quantityChange =
-        requestedStock -
-        currentStock;
-
-      if (
-        quantityChange !== 0
-      ) {
-        const {
-          error:
-            inventoryError,
-        } =
-          await supabase.rpc(
-            "adjust_inventory",
-            {
-              p_variant_id:
-                variantId,
-
-              p_quantity_change:
-                quantityChange,
-
-              p_reason:
-                "correction",
-
-              p_note:
-                "Stock adjusted from product editor",
-            },
-          );
-
-        if (inventoryError) {
-          revalidatePublicCatalog();
-
-          return errorResponse(
-            "تم حفظ بيانات المنتج، لكن تعذر تسجيل تعديل المخزون بأمان. حدّث الصفحة وراجع صفحة المخزون.",
-            500,
-          );
-        }
-      }
-    } else {
-      const {
-        data:
-          createdVariant,
-        error,
-      } =
-        await supabase
-          .from(
-            "product_variants",
-          )
-          .insert({
-            product_id:
-              id,
-
-            ...values,
-
-            stock_quantity: 0,
-          })
-          .select("id")
-          .single();
-
-      if (
-        error ||
-        !createdVariant
-      ) {
-        revalidatePublicCatalog();
-
-        return errorResponse(
-          postgresMessage(
-            error?.code,
-            error?.message ??
-              "تعذر إنشاء الـVariant.",
-          ),
-        );
-      }
-
-      if (
-        requestedStock > 0
-      ) {
-        const {
-          error:
-            inventoryError,
-        } =
-          await supabase.rpc(
-            "adjust_inventory",
-            {
-              p_variant_id:
-                createdVariant.id,
-
-              p_quantity_change:
-                requestedStock,
-
-              p_reason:
-                "restock",
-
-              p_note:
-                "Initial stock for new product variant",
-            },
-          );
-
-        if (inventoryError) {
-          revalidatePublicCatalog();
-
-          return errorResponse(
-            "تم إنشاء الـVariant، لكن تعذر تسجيل مخزونه الابتدائي بأمان. حدّث الصفحة وراجع صفحة المخزون.",
-            500,
-          );
-        }
-      }
-    }
   }
 
   revalidatePublicCatalog();

@@ -43,6 +43,7 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
   const [confirmedOrder, setConfirmedOrder] =
     useState<ConfirmedOrder | null>(null);
   const submissionLock = useRef(false);
+  const idempotencyKey = useRef<string | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +53,7 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
     }
 
     submissionLock.current = true;
+    idempotencyKey.current ??= crypto.randomUUID();
     setSubmitting(true);
     setError("");
 
@@ -73,6 +75,7 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
           customer_address: String(data.get("customer_address") ?? ""),
           customer_notes: String(data.get("customer_notes") ?? ""),
           code: String(data.get("code") ?? ""),
+          checkout_idempotency_key: idempotencyKey.current,
           items: items.map((item) => ({
             variant_id: item.variantId,
             quantity: item.quantity,

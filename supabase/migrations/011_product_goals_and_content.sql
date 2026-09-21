@@ -9,12 +9,18 @@ alter table public.products
   add constraint products_nutrition_facts_length_check
     check (
       nutrition_facts is null
-      or length(btrim(nutrition_facts)) between 1 and 10000
+      or (
+        length(nutrition_facts) <= 10000
+        and length(btrim(nutrition_facts)) > 0
+      )
     ),
   add constraint products_usage_instructions_length_check
     check (
       usage_instructions is null
-      or length(btrim(usage_instructions)) between 1 and 10000
+      or (
+        length(usage_instructions) <= 10000
+        and length(btrim(usage_instructions)) > 0
+      )
     );
 
 create table public.product_training_goals (
@@ -28,6 +34,35 @@ create table public.product_training_goals (
 
 create index product_training_goals_goal_product_idx
   on public.product_training_goals (goal, product_id);
+
+-- Stop before backfill when legacy values would otherwise be silently skipped.
+-- The exception itself is the preflight report and lists every unmapped value.
+do $$
+declare
+  v_unmapped_values text;
+begin
+  select string_agg(quote_nullable(legacy.training_goal), ', ' order by legacy.training_goal)
+    into v_unmapped_values
+  from (
+    select distinct p.training_goal
+    from public.products p
+    where p.training_goal is not null
+      and p.training_goal not in (
+        'muscle-support',
+        'muscle-building',
+        'energy',
+        'energy-endurance',
+        'weight-management'
+      )
+  ) legacy;
+
+  if v_unmapped_values is not null then
+    raise exception 'Unmapped legacy products.training_goal values: %', v_unmapped_values
+      using errcode = '23514',
+            hint = 'Map or explicitly clear every reported value before applying migration 011.';
+  end if;
+end;
+$$;
 
 insert into public.product_training_goals (product_id, goal)
 select
@@ -134,7 +169,11 @@ grant execute on function public.set_product_training_goals(uuid, text[]) to aut
 comment on function public.set_product_training_goals is
   'Admin-only atomic replacement of normalized product training-goal assignments.';
 
-create or replace function public.list_storefront_products(
+drop function public.list_storefront_products(
+  text[], text[], boolean, text, text, integer, integer
+);
+
+create function public.list_storefront_products(
   p_category_slugs text[] default null,
   p_training_goals text[] default null,
   p_available boolean default false,
@@ -150,7 +189,6 @@ returns table (
   brand_name_ar text,
   category_slug text,
   product_type text,
-  training_goal text,
   badge_label_ar text,
   featured boolean,
   variant_id uuid,
@@ -179,7 +217,6 @@ as $$
     b.name_ar as brand_name_ar,
     c.slug as category_slug,
     p.product_type,
-    null::text as training_goal,
     p.badge_label_ar,
     p.featured,
     first_variant.id as variant_id,
@@ -300,7 +337,11 @@ grant execute on function public.list_storefront_products(
   text[], text[], boolean, text, text, integer, integer
 ) to anon, authenticated;
 
-create or replace function public.list_storefront_products_by_scope(
+drop function public.list_storefront_products_by_scope(
+  text, text[], text[], boolean, text, text, integer, integer
+);
+
+create function public.list_storefront_products_by_scope(
   p_product_scope text,
   p_category_slugs text[] default null,
   p_training_goals text[] default null,
@@ -317,7 +358,6 @@ returns table (
   brand_name_ar text,
   category_slug text,
   product_type text,
-  training_goal text,
   badge_label_ar text,
   featured boolean,
   variant_id uuid,
@@ -346,7 +386,6 @@ as $$
     b.name_ar as brand_name_ar,
     c.slug as category_slug,
     p.product_type,
-    null::text as training_goal,
     p.badge_label_ar,
     p.featured,
     first_variant.id as variant_id,

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:batch1": "node --test scripts/refactor-batch-1.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

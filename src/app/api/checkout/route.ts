@@ -72,6 +72,13 @@ function checkoutError(code: string | undefined, message: string) {
     };
   }
 
+  if (normalized.includes("idempotency key reused")) {
+    return {
+      status: 409,
+      message: "تعذر إعادة استخدام محاولة الطلب بعد تغيير بياناتها. حدّث الصفحة وحاول مجددًا.",
+    };
+  }
+
   if (
     normalized.includes("is unavailable") ||
     normalized.includes("invalid input syntax for type uuid")
@@ -153,7 +160,12 @@ export async function POST(request: Request) {
   const customerAddress = text(payload.customer_address);
   const customerNotes = optionalText(payload.customer_notes);
   const code = text(payload.code).toUpperCase() || null;
+  const idempotencyKey = text(payload.checkout_idempotency_key);
   const rawItems = payload.items;
+
+  if (!isUuid(idempotencyKey)) {
+    return errorResponse("معرّف محاولة الطلب غير صالح. حدّث الصفحة وحاول مجددًا.");
+  }
 
   if (customerFullName.length < 2 || customerFullName.length > 160) {
     return errorResponse("الاسم الكامل مطلوب ويجب ألا يتجاوز 160 حرفًا.");
@@ -216,6 +228,7 @@ export async function POST(request: Request) {
     p_customer_city: customerCity,
     p_customer_address: customerAddress,
     p_items: items,
+    p_idempotency_key: idempotencyKey,
     p_customer_notes: customerNotes,
     p_code: code,
   });

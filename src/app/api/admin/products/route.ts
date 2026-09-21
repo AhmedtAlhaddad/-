@@ -721,64 +721,41 @@ export async function POST(
     });
   }
 
-  /*
-   * ننشئ المنتج كمسودة أولًا.
-   * بهذا لو فشل إنشاء الـVariants
-   * لن يظهر منتج ناقص للزبائن.
-   */
   const {
-    data: product,
+    data: productResult,
     error: productError,
-  } =
-    await supabase
-      .from("products")
-      .insert({
+  } = await supabase.rpc(
+    "create_admin_product",
+    {
+      p_product: {
         slug,
         name_ar: nameAr,
         name_en: nameEn,
-
-        short_description_ar:
-          shortDescriptionAr,
-
-        full_description_ar:
-          fullDescriptionAr,
-
-        nutrition_facts:
-          nutritionFacts,
-
-        usage_instructions:
-          usageInstructions,
-
-        brand_id:
-          brandId,
-
-        category_id:
-          categoryId,
-
-        product_type:
-          productType,
-
-        training_goal:
-          null,
-
+        short_description_ar: shortDescriptionAr,
+        full_description_ar: fullDescriptionAr,
+        nutrition_facts: nutritionFacts,
+        usage_instructions: usageInstructions,
+        brand_id: brandId,
+        category_id: categoryId,
+        product_type: productType,
         highlights,
-
-        badge_label_ar:
-          badgeLabelAr,
-
-        status:
-          "draft",
-
+        badge_label_ar: badgeLabelAr,
+        status: requestedStatus,
         featured,
-      })
-      .select(
-        "id, slug",
-      )
-      .single();
+      },
+      p_variants: normalizedVariants,
+      p_goals: trainingGoals,
+    },
+  );
 
   if (
     productError ||
-    !product
+    !productResult ||
+    typeof productResult !==
+      "object" ||
+    Array.isArray(
+      productResult,
+    )
   ) {
     return NextResponse.json(
       {
@@ -795,167 +772,26 @@ export async function POST(
     );
   }
 
-  const {
-    error: goalsError,
-  } = await supabase.rpc(
-    "set_product_training_goals",
-    {
-      p_product_id: product.id,
-      p_goals: trainingGoals,
-    },
-  );
+  const product =
+    productResult as Record<
+      string,
+      unknown
+    >;
 
-  if (goalsError) {
-    await supabase
-      .from("products")
-      .delete()
-      .eq("id", product.id);
+  const productId =
+    text(product.id);
 
-    return NextResponse.json(
-      {
-        error:
-          "تعذر حفظ أهداف التدريب للمنتج.",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-
-  const variantRows =
-    normalizedVariants.map(
-      (variant) => ({
-        product_id:
-          product.id,
-
-        ...variant,
-
-        stock_quantity: 0,
-      }),
-    );
-
-  const {
-    data: createdVariants,
-    error: variantsError,
-  } =
-    await supabase
-      .from(
-        "product_variants",
-      )
-      .insert(
-        variantRows,
-      )
-      .select("id, sku");
+  const productSlug =
+    text(product.slug);
 
   if (
-    variantsError ||
-    !createdVariants ||
-    createdVariants.length !==
-      normalizedVariants.length
+    !productId ||
+    !productSlug
   ) {
-    /*
-     * محاولة تنظيف المنتج
-     * في حال فشل إنشاء الـVariants.
-     */
-    await supabase
-      .from("products")
-      .delete()
-      .eq(
-        "id",
-        product.id,
-      );
-
     return NextResponse.json(
       {
         error:
-          postgresMessage(
-            variantsError?.code,
-            variantsError?.message ??
-              "تعذر إنشاء خيارات المنتج.",
-          ),
-      },
-      {
-        status: 400,
-      },
-    );
-  }
-
-  for (
-    const createdVariant of
-    createdVariants ?? []
-  ) {
-    const requestedStock =
-      normalizedVariants.find(
-        (variant) =>
-          variant.sku ===
-          createdVariant.sku,
-      )?.stock_quantity ?? 0;
-
-    if (requestedStock === 0) {
-      continue;
-    }
-
-    const {
-      error: inventoryError,
-    } =
-      await supabase.rpc(
-        "adjust_inventory",
-        {
-          p_variant_id:
-            createdVariant.id,
-
-          p_quantity_change:
-            requestedStock,
-
-          p_reason:
-            "restock",
-
-          p_note:
-            "Initial stock during product creation",
-        },
-      );
-
-    if (inventoryError) {
-      return NextResponse.json(
-        {
-          error:
-            "تم إنشاء المنتج كمسودة، لكن تعذر تسجيل المخزون الابتدائي بأمان. راجع المخزون قبل تفعيل المنتج.",
-
-          productId:
-            product.id,
-        },
-        {
-          status: 500,
-        },
-      );
-    }
-  }
-
-  const {
-    error: statusError,
-  } =
-    await supabase
-      .from("products")
-      .update({
-        status:
-          requestedStatus,
-      })
-      .eq(
-        "id",
-        product.id,
-      );
-
-  if (statusError) {
-    /*
-     * المنتج سيبقى Draft لو
-     * تعذر تغيير الحالة النهائية.
-     */
-    return NextResponse.json(
-      {
-        error:
-          "تم إنشاء المنتج والـVariants، لكن تعذر تحديث حالة المنتج النهائية. المنتج محفوظ كمسودة.",
-        productId:
-          product.id,
+          "تم تنفيذ إنشاء المنتج دون إرجاع تأكيد صالح.",
       },
       {
         status: 500,
@@ -964,7 +800,7 @@ export async function POST(
   }
 
   revalidatePublicCatalog(
-    product.slug,
+    productSlug,
   );
 
   return NextResponse.json(
@@ -973,10 +809,10 @@ export async function POST(
 
       product: {
         id:
-          product.id,
+          productId,
 
         slug:
-          product.slug,
+          productSlug,
       },
     },
     {

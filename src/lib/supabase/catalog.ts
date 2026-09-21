@@ -104,7 +104,6 @@ type SupabaseProductRow = {
   nutrition_facts: string | null;
   usage_instructions: string | null;
   product_type: string | null;
-  training_goal: string | null;
   highlights: unknown;
   badge_label_ar: string | null;
   featured: boolean;
@@ -122,7 +121,6 @@ type CatalogProductRow = {
   slug: string;
   name_ar: string;
   product_type: string | null;
-  training_goal: string | null;
   badge_label_ar: string | null;
   featured: boolean;
   brand: BrandRow | null;
@@ -138,7 +136,6 @@ type StorefrontProductRow = {
   brand_name_ar: string;
   category_slug: string;
   product_type: string | null;
-  training_goal: string | null;
   badge_label_ar: string | null;
   featured: boolean;
   variant_id: string;
@@ -192,7 +189,6 @@ const productSelect = `
   nutrition_facts,
   usage_instructions,
   product_type,
-  training_goal,
   highlights,
   badge_label_ar,
   featured,
@@ -241,7 +237,6 @@ const catalogCardSelect = `
   slug,
   name_ar,
   product_type,
-  training_goal,
   badge_label_ar,
   featured,
 
