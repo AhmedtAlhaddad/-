@@ -158,6 +158,14 @@ export function ProductDetail({
   const stickyImage =
     galleryImages[0] ??
     product.images[0];
+  const listingHref =
+    product.storefrontScope === "accessories"
+      ? "/shop?type=accessories"
+      : "/shop?type=supplements";
+  const listingLabel =
+    product.storefrontScope === "accessories"
+      ? "إكسسوارات اللياقة"
+      : "المكملات الغذائية";
 
   const add = () => {
     if (
@@ -188,23 +196,26 @@ export function ProductDetail({
 
   return (
     <main className="product-page">
-      <div className="container breadcrumbs">
+      <nav
+        className="container breadcrumbs"
+        aria-label="مسار التنقل"
+      >
         <Link href="/">
           الرئيسية
         </Link>
 
         <span>/</span>
 
-        <Link href="/shop">
-          المكملات الغذائية
+        <Link href={listingHref}>
+          {listingLabel}
         </Link>
 
         <span>/</span>
 
-        <span>
+        <span aria-current="page">
           {product.shortName}
         </span>
-      </div>
+      </nav>
 
       <section className="container product-top">
         <ProductGallery
@@ -513,12 +524,9 @@ export function ProductDetail({
                 الحقائق الغذائية
               </h2>
 
-              <p>
-                تختلف المعلومات
-                الغذائية حسب المنتج
-                والنكهة والحجم. راجع
-                ملصق العبوة للحصول
-                على القيم الدقيقة.
+              <p className="tab-copy">
+                {product.nutritionFacts ??
+                  "راجع ملصق المنتج للحصول على الحقائق الغذائية."}
               </p>
             </div>
           )}
@@ -530,10 +538,9 @@ export function ProductDetail({
                 طريقة الاستخدام
               </h2>
 
-              <p>
-                اتبع تعليمات
-                الاستخدام الموجودة
-                على عبوة المنتج.
+              <p className="tab-copy">
+                {product.usageInstructions ??
+                  "اتبع تعليمات الاستخدام الموجودة على ملصق المنتج."}
               </p>
             </div>
           )}

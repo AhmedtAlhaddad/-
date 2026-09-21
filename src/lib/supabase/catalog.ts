@@ -101,6 +101,8 @@ type SupabaseProductRow = {
   name_en: string | null;
   short_description_ar: string | null;
   full_description_ar: string | null;
+  nutrition_facts: string | null;
+  usage_instructions: string | null;
   product_type: string | null;
   training_goal: string | null;
   highlights: unknown;
@@ -187,6 +189,8 @@ const productSelect = `
   name_en,
   short_description_ar,
   full_description_ar,
+  nutrition_facts,
+  usage_instructions,
   product_type,
   training_goal,
   highlights,
@@ -341,6 +345,31 @@ function getStorageUrl(
     .getPublicUrl(path);
 
   return data.publicUrl;
+}
+
+function getBrandLogoUrl(
+  path: string | null,
+): string | null {
+  if (!path) {
+    return null;
+  }
+
+  if (path.startsWith("/")) {
+    return path;
+  }
+
+  if (
+    path.startsWith("https://") ||
+    path.startsWith("http://")
+  ) {
+    return path.includes(
+      ".supabase.co/storage/v1/object/public/product-images/",
+    )
+      ? path
+      : null;
+  }
+
+  return getStorageUrl(path);
 }
 
 function getImageUrl(
@@ -569,6 +598,12 @@ function mapProduct(
       row.full_description_ar ??
       "",
 
+    nutritionFacts:
+      row.nutrition_facts,
+
+    usageInstructions:
+      row.usage_instructions,
+
     category:
       mapCategory(
         row.category,
@@ -591,6 +626,11 @@ function mapProduct(
       mapProductType(
         row.product_type,
       ),
+
+    storefrontScope:
+      row.product_type === "fitness-accessory"
+        ? "accessories"
+        : "supplements",
 
     features:
       highlights,
@@ -615,6 +655,7 @@ function compactCatalogProduct(
     badge: product.badge,
     inStock: product.inStock,
     type: product.type,
+    storefrontScope: product.storefrontScope,
     variants: firstVariant
       ? [
           {
@@ -635,6 +676,8 @@ function mapCatalogProduct(
     full_description_ar: null,
     highlights: [],
     status: "active",
+    nutrition_facts: null,
+    usage_instructions: null,
   } as SupabaseProductRow);
 
   return compactCatalogProduct(product);
@@ -682,6 +725,10 @@ function mapStorefrontProduct(
     badge: row.badge_label_ar ?? undefined,
     inStock: row.in_stock,
     type: mapProductType(row.product_type),
+    storefrontScope:
+      row.product_type === "fitness-accessory"
+        ? "accessories"
+        : "supplements",
     variants: [
       {
         id: variant.id,
@@ -944,52 +991,6 @@ export async function getFeaturedProducts(
     .slice(0, limit);
 }
 
-export async function getLatestBrands(): Promise<
-  Brand[]
-> {
-  const { data, error } = await supabase
-    .from("brands")
-    .select(`
-      id,
-      slug,
-      name_ar,
-      name_en,
-      logo_path,
-      active,
-      sort_order,
-      created_at
-    `)
-    .eq("active", true)
-    .order("created_at", {
-      ascending: false,
-    })
-    .order("id", {
-      ascending: false,
-    })
-    .limit(5);
-
-  if (error) {
-    console.error(
-      "Failed to fetch latest brands:",
-      error,
-    );
-
-    throw error;
-  }
-
-  return (data ?? []).map((row) => {
-    const brand = row as CatalogBrandRow;
-
-    return {
-      id: brand.id,
-      name:
-        brand.name_ar.trim() ||
-        brand.name_en?.trim() ||
-        brand.slug,
-    };
-  });
-}
-
 export async function getBrands(): Promise<
   Brand[]
 > {
@@ -1003,7 +1004,8 @@ export async function getBrands(): Promise<
         name_en,
         logo_path,
         active,
-        sort_order
+        sort_order,
+        created_at
       `)
       .eq(
         "active",
@@ -1041,8 +1043,14 @@ export async function getBrands(): Promise<
           brand.id,
 
         name:
-          brand.name_en ??
-          brand.name_ar,
+          brand.name_ar.trim() ||
+          brand.name_en?.trim() ||
+          brand.slug,
+
+        logo:
+          getBrandLogoUrl(
+            brand.logo_path,
+          ) ?? undefined,
       };
     },
   );

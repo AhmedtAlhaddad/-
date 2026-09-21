@@ -1,6 +1,6 @@
 ﻿.page {
   display: grid;
-  gap: 24px;
+  gap: 28px;
   direction: rtl;
 }
 
@@ -63,7 +63,7 @@
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .stat {
@@ -94,7 +94,7 @@
 }
 
 .toolbar {
-  padding: 16px;
+  padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: 17px;
   background: #101614;
@@ -464,6 +464,14 @@
 }
 
 @media (max-width: 680px) {
+  .page {
+    gap: 22px;
+  }
+
+  .toolbar {
+    padding: 16px;
+  }
+
   .heading {
     align-items: stretch;
     flex-direction: column;

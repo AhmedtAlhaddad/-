@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { BrandStrip } from "@/components/home/brand-strip";
 import { CategoryCarousel } from "@/components/home/category-carousel";
 import { ProductGrid } from "@/components/products/product-card";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -13,6 +14,7 @@ import {
 import type { Brand } from "@/types/brand";
 import type { HomepageCategory } from "@/types/category";
 import type { CatalogProduct } from "@/types/product";
+import { trainingGoalDetails } from "@/lib/catalog-query";
 
 export function Hero() {
   return (
@@ -101,28 +103,6 @@ export function Hero() {
   );
 }
 
-export function BrandStrip({
-  brands,
-}: {
-  brands: Brand[];
-}) {
-  if (!brands.length) {
-    return null;
-  }
-
-  return (
-    <div className="brand-strip">
-      <div className="container">
-        {brands.map((brand) => (
-          <span key={brand.id}>
-            {brand.name}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function CategorySection({
   categories,
 }: {
@@ -150,38 +130,20 @@ export function CategorySection({
   );
 }
 
-const goals = [
-  {
-    title:
-      "بناء عضلات",
-    copy:
-      "تصفح المنتجات المرتبطة بأهداف القوة والكتلة العضلية",
-    image:
-      "/images/goal-muscle.jpg",
-    href:
-      `/shop?goal=${encodeURIComponent("بناء عضلات")}`,
-  },
-  {
-    title:
-      "زيادة الوزن وقدرة التحمل",
-    copy:
-      "تصفح الخيارات المرتبطة بالطاقة والأداء الرياضي",
-    image:
-      "/images/goal-energy.jpg",
-    href:
-      `/shop?goal=${encodeURIComponent("زيادة الوزن وقدرة التحمل")}`,
-  },
-  {
-    title:
-      "حرق الدهون وانقاص الوزن",
-    copy:
-      "تصفح الخيارات حسب احتياجاتك الغذائية والرياضية",
-    image:
-      "/images/goal-weight.jpg",
-    href:
-      `/shop?goal=${encodeURIComponent("حرق الدهون وانقاص الوزن")}`,
-  },
+const goalImages = [
+  "/images/goal-muscle.jpg",
+  "/images/goal-energy.jpg",
+  "/images/goal-weight.jpg",
 ];
+
+const goals = trainingGoalDetails.map(
+  (goal, index) => ({
+    title: goal.label,
+    copy: goal.description,
+    image: goalImages[index],
+    href: `/shop?goal=${encodeURIComponent(goal.label)}`,
+  }),
+);
 
 export function GoalsSection() {
   return (

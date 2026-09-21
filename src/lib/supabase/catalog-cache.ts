@@ -8,7 +8,6 @@ import {
   getCategories as fetchCategories,
   getFeaturedProducts as fetchFeaturedProducts,
   getHomepageCategories as fetchHomepageCategories,
-  getLatestBrands as fetchLatestBrands,
   getProductBySlug as fetchProductBySlug,
   searchProducts as fetchSearchProducts,
 } from "@/lib/supabase/catalog";
@@ -65,7 +64,7 @@ const cachedCatalogPage = unstable_cache(
       page,
       pageSize,
     }),
-  ["public-catalog-list-v3"],
+  ["public-catalog-list-v4"],
   {
     revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS,
     tags: [PUBLIC_CATALOG_CACHE_TAG],
@@ -94,7 +93,7 @@ const cachedProductBySlug =
         slug,
       ),
     [
-      "public-catalog-product-by-slug-v1",
+      "public-catalog-product-by-slug-v2",
     ],
     {
       revalidate:
@@ -111,7 +110,7 @@ const cachedBrands =
     async () =>
       fetchBrands(),
     [
-      "public-catalog-brands-v1",
+      "public-catalog-brands-v2",
     ],
     {
       revalidate:
@@ -120,17 +119,6 @@ const cachedBrands =
       tags: [
         PUBLIC_CATALOG_CACHE_TAG,
       ],
-    },
-  );
-
-const cachedLatestBrands =
-  unstable_cache(
-    async () => fetchLatestBrands(),
-    ["public-catalog-latest-brands-v1"],
-    {
-      revalidate:
-        PUBLIC_CATALOG_REVALIDATE_SECONDS,
-      tags: [PUBLIC_CATALOG_CACHE_TAG],
     },
   );
 
@@ -210,10 +198,6 @@ export async function getProductBySlug(
 
 export async function getBrands() {
   return cachedBrands();
-}
-
-export async function getLatestBrands() {
-  return cachedLatestBrands();
 }
 
 export async function getCategories() {

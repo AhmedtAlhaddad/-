@@ -1,6 +1,6 @@
 ﻿.page {
   display: grid;
-  gap: 24px;
+  gap: 28px;
   direction: rtl;
 }
 
@@ -46,11 +46,11 @@
 
 .form {
   display: grid;
-  gap: 18px;
+  gap: 22px;
 }
 
 .card {
-  padding: 22px;
+  padding: 26px;
   border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: 19px;
   background: #101614;
@@ -175,6 +175,41 @@
 }
 
 .checkboxRow input {
+  width: 17px;
+  height: 17px;
+  accent-color: #22cf91;
+}
+
+.goalFieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.goalOptions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.goalOption {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  background: #0b100f;
+  color: #b8c2be;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.goalOption input {
   width: 17px;
   height: 17px;
   accent-color: #22cf91;
@@ -317,6 +352,11 @@
 }
 
 @media (max-width: 700px) {
+  .page,
+  .form {
+    gap: 22px;
+  }
+
   .top {
     align-items: flex-start;
     flex-direction: column-reverse;
@@ -329,6 +369,10 @@
   .grid2,
   .grid3,
   .grid4 {
+    grid-template-columns: 1fr;
+  }
+
+  .goalOptions {
     grid-template-columns: 1fr;
   }
 

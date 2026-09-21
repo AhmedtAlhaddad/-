@@ -24,6 +24,14 @@ const UNITS =
     "piece",
   ]);
 
+const TRAINING_GOALS = new Set([
+  "muscle-building",
+  "energy-endurance",
+  "weight-management",
+]);
+
+const MAX_PRODUCT_CONTENT_LENGTH = 10000;
+
 type NormalizedVariant = {
   id: string | null;
   sku: string;
@@ -279,6 +287,29 @@ export async function PATCH(
       payload.product_type,
     );
 
+  const nutritionFacts =
+    nullableText(
+      payload.nutrition_facts,
+    );
+
+  const usageInstructions =
+    nullableText(
+      payload.usage_instructions,
+    );
+
+  const trainingGoals =
+    Array.isArray(
+      payload.training_goals,
+    )
+      ? [
+          ...new Set(
+            payload.training_goals.map(
+              (goal) => text(goal),
+            ),
+          ),
+        ]
+      : [];
+
   const status =
     text(
       payload.status,
@@ -326,6 +357,28 @@ export async function PATCH(
   ) {
     return errorResponse(
       "حالة المنتج غير صالحة.",
+    );
+  }
+
+  if (
+    trainingGoals.some(
+      (goal) =>
+        !TRAINING_GOALS.has(goal),
+    )
+  ) {
+    return errorResponse(
+      "أحد أهداف التدريب المحددة غير صالح.",
+    );
+  }
+
+  if (
+    (nutritionFacts?.length ?? 0) >
+      MAX_PRODUCT_CONTENT_LENGTH ||
+    (usageInstructions?.length ?? 0) >
+      MAX_PRODUCT_CONTENT_LENGTH
+  ) {
+    return errorResponse(
+      "الحقائق الغذائية أو تعليمات الاستخدام أطول من الحد المسموح.",
     );
   }
 
@@ -804,6 +857,12 @@ export async function PATCH(
             payload.full_description_ar,
           ),
 
+        nutrition_facts:
+          nutritionFacts,
+
+        usage_instructions:
+          usageInstructions,
+
         brand_id:
           brandId,
 
@@ -814,9 +873,7 @@ export async function PATCH(
           productType,
 
         training_goal:
-          nullableText(
-            payload.training_goal,
-          ),
+          null,
 
         badge_label_ar:
           nullableText(
@@ -856,6 +913,25 @@ export async function PATCH(
         productError.code,
         productError.message,
       ),
+    );
+  }
+
+  const {
+    error: goalsError,
+  } = await supabase.rpc(
+    "set_product_training_goals",
+    {
+      p_product_id: id,
+      p_goals: trainingGoals,
+    },
+  );
+
+  if (goalsError) {
+    revalidatePublicCatalog();
+
+    return errorResponse(
+      "تم حفظ بيانات المنتج، لكن تعذر حفظ أهداف التدريب. حدّث الصفحة وحاول مجددًا.",
+      500,
     );
   }
 

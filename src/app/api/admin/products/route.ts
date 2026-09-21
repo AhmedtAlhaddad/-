@@ -22,6 +22,14 @@ const ALLOWED_WEIGHT_UNITS = new Set([
   "piece",
 ]);
 
+const ALLOWED_TRAINING_GOALS = new Set([
+  "muscle-building",
+  "energy-endurance",
+  "weight-management",
+]);
+
+const MAX_PRODUCT_CONTENT_LENGTH = 10000;
+
 function text(
   value: unknown,
 ) {
@@ -209,10 +217,28 @@ export async function POST(
       payload.product_type,
     );
 
-  const trainingGoal =
+  const nutritionFacts =
     nullableText(
-      payload.training_goal,
+      payload.nutrition_facts,
     );
+
+  const usageInstructions =
+    nullableText(
+      payload.usage_instructions,
+    );
+
+  const trainingGoals =
+    Array.isArray(
+      payload.training_goals,
+    )
+      ? [
+          ...new Set(
+            payload.training_goals.map(
+              (goal) => text(goal),
+            ),
+          ),
+        ]
+      : [];
 
   const badgeLabelAr =
     nullableText(
@@ -314,6 +340,40 @@ export async function POST(
       {
         error:
           "حالة المنتج غير صالحة.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (
+    trainingGoals.some(
+      (goal) =>
+        !ALLOWED_TRAINING_GOALS.has(goal),
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "أحد أهداف التدريب المحددة غير صالح.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (
+    (nutritionFacts?.length ?? 0) >
+      MAX_PRODUCT_CONTENT_LENGTH ||
+    (usageInstructions?.length ?? 0) >
+      MAX_PRODUCT_CONTENT_LENGTH
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "الحقائق الغذائية أو تعليمات الاستخدام أطول من الحد المسموح.",
       },
       {
         status: 400,
@@ -683,6 +743,12 @@ export async function POST(
         full_description_ar:
           fullDescriptionAr,
 
+        nutrition_facts:
+          nutritionFacts,
+
+        usage_instructions:
+          usageInstructions,
+
         brand_id:
           brandId,
 
@@ -693,7 +759,7 @@ export async function POST(
           productType,
 
         training_goal:
-          trainingGoal,
+          null,
 
         highlights,
 
@@ -725,6 +791,33 @@ export async function POST(
       },
       {
         status: 400,
+      },
+    );
+  }
+
+  const {
+    error: goalsError,
+  } = await supabase.rpc(
+    "set_product_training_goals",
+    {
+      p_product_id: product.id,
+      p_goals: trainingGoals,
+    },
+  );
+
+  if (goalsError) {
+    await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
+
+    return NextResponse.json(
+      {
+        error:
+          "تعذر حفظ أهداف التدريب للمنتج.",
+      },
+      {
+        status: 500,
       },
     );
   }

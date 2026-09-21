@@ -184,7 +184,7 @@
 }
 
 .content {
-  padding: 34px;
+  padding: 40px clamp(28px, 3vw, 44px) 48px;
   max-width: 1500px;
   margin-inline: auto;
 }
@@ -212,7 +212,7 @@
   }
 
   .content {
-    padding: 22px 16px 40px;
+    padding: 26px 18px 44px;
   }
 
   .mobileHeader {

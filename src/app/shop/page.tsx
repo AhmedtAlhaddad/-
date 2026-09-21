@@ -12,7 +12,9 @@ import {
 import {
   SHOP_PAGE_SIZE,
   areCategoryParamsCanonical,
+  areGoalParamsCanonical,
   buildShopHref,
+  isAvailabilityParamCanonical,
   isProductScopeCanonical,
   normalizeShopQuery,
   toTrainingGoals,
@@ -79,6 +81,14 @@ export default async function Page({
     !areCategoryParamsCanonical(
       params.category,
       query.categories,
+    ) ||
+    !areGoalParamsCanonical(
+      params.goal,
+      query.goals,
+    ) ||
+    !isAvailabilityParamCanonical(
+      params.available,
+      query.available,
     ) ||
     !isProductScopeCanonical(
       params.type,

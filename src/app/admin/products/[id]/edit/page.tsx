@@ -58,12 +58,13 @@ export default async function Page({
     imagesResult,
     brandsResult,
     categoriesResult,
+    goalsResult,
   ] =
     await Promise.all([
       supabase
         .from("products")
         .select(
-          "id, slug, name_ar, name_en, short_description_ar, full_description_ar, brand_id, category_id, product_type, training_goal, highlights, badge_label_ar, status, featured",
+          "id, slug, name_ar, name_en, short_description_ar, full_description_ar, nutrition_facts, usage_instructions, brand_id, category_id, product_type, highlights, badge_label_ar, status, featured",
         )
         .eq(
           "id",
@@ -130,6 +131,14 @@ export default async function Page({
             ascending: true,
           },
         ),
+
+      supabase
+        .from("product_training_goals")
+        .select("goal")
+        .eq("product_id", id)
+        .order("goal", {
+          ascending: true,
+        }),
     ]);
 
   if (
@@ -168,6 +177,12 @@ export default async function Page({
   ) {
     throw new Error(
       categoriesResult.error.message,
+    );
+  }
+
+  if (goalsResult.error) {
+    throw new Error(
+      goalsResult.error.message,
     );
   }
 
@@ -291,11 +306,19 @@ export default async function Page({
         full_description_ar:
           product.full_description_ar,
 
+        nutrition_facts:
+          product.nutrition_facts,
+
+        usage_instructions:
+          product.usage_instructions,
+
         product_type:
           product.product_type,
 
-        training_goal:
-          product.training_goal,
+        training_goals:
+          (goalsResult.data ?? []).map(
+            (goal) => goal.goal,
+          ),
 
         badge_label_ar:
           product.badge_label_ar,

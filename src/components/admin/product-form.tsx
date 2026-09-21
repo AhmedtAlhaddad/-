@@ -44,14 +44,31 @@ type InitialProduct = {
   category_id: string;
   short_description_ar: string;
   full_description_ar: string | null;
+  nutrition_facts: string | null;
+  usage_instructions: string | null;
   product_type: string;
-  training_goal: string | null;
+  training_goals: string[];
   badge_label_ar: string | null;
   highlights: string[];
   status: string;
   featured: boolean;
   variants: InitialVariant[];
 };
+
+const TRAINING_GOALS = [
+  {
+    value: "muscle-building",
+    label: "بناء عضلات",
+  },
+  {
+    value: "energy-endurance",
+    label: "زيادة الوزن وقدرة التحمل",
+  },
+  {
+    value: "weight-management",
+    label: "حرق الدهون وانقاص الوزن",
+  },
+] as const;
 
 type VariantForm = {
   key: string;
@@ -201,15 +218,25 @@ export function ProductForm({
       initialData?.full_description_ar ?? "",
     );
 
+  const [nutritionFacts, setNutritionFacts] =
+    useState(
+      initialData?.nutrition_facts ?? "",
+    );
+
+  const [usageInstructions, setUsageInstructions] =
+    useState(
+      initialData?.usage_instructions ?? "",
+    );
+
   const [productType, setProductType] =
     useState(
       initialData?.product_type ??
         "whey-protein",
     );
 
-  const [trainingGoal, setTrainingGoal] =
+  const [trainingGoals, setTrainingGoals] =
     useState(
-      initialData?.training_goal ?? "",
+      initialData?.training_goals ?? [],
     );
 
   const [badge, setBadge] =
@@ -326,11 +353,17 @@ export function ProductForm({
             full_description_ar:
               fullDescription,
 
+            nutrition_facts:
+              nutritionFacts,
+
+            usage_instructions:
+              usageInstructions,
+
             product_type:
               productType,
 
-            training_goal:
-              trainingGoal,
+            training_goals:
+              trainingGoals,
 
             badge_label_ar:
               badge,
@@ -632,6 +665,46 @@ export function ProductForm({
               }
             />
           </label>
+
+          <div className={styles.grid2}>
+            <label className={styles.field}>
+              <span className={styles.label}>
+                الحقائق الغذائية
+              </span>
+
+              <textarea
+                className={styles.textarea}
+                value={nutritionFacts}
+                onChange={(event) =>
+                  setNutritionFacts(
+                    event.target.value,
+                  )
+                }
+                maxLength={10000}
+              />
+            </label>
+
+            <label className={styles.field}>
+              <span className={styles.label}>
+                تعليمات الاستخدام
+              </span>
+
+              <textarea
+                className={styles.textarea}
+                value={usageInstructions}
+                onChange={(event) =>
+                  setUsageInstructions(
+                    event.target.value,
+                  )
+                }
+                maxLength={10000}
+              />
+
+              <span className={styles.hint}>
+                اكتب تعليمات الملصق فقط، واترك الحقل فارغًا إذا لم تتوفر.
+              </span>
+            </label>
+          </div>
         </section>
 
         <section className={styles.card}>
@@ -642,7 +715,7 @@ export function ProductForm({
             </p>
           </div>
 
-          <div className={styles.grid3}>
+          <div className={styles.grid2}>
             <label className={styles.field}>
               <span className={styles.label}>
                 Product Type *
@@ -659,42 +732,6 @@ export function ProductForm({
                 dir="ltr"
                 required
               />
-            </label>
-
-            <label className={styles.field}>
-              <span className={styles.label}>
-                Training Goal
-              </span>
-
-              <select
-                className={styles.select}
-                value={trainingGoal}
-                onChange={(event) =>
-                  setTrainingGoal(
-                    event.target.value,
-                  )
-                }
-              >
-                <option value="">
-                  بدون هدف
-                </option>
-
-                <option value="muscle-support">
-                  دعم العضلات
-                </option>
-
-                <option value="energy-endurance">
-                  الطاقة والتحمل
-                </option>
-
-                <option value="weight-management">
-                  إدارة الوزن
-                </option>
-
-                <option value="recovery">
-                  الاستشفاء
-                </option>
-              </select>
             </label>
 
             <label className={styles.field}>
@@ -725,6 +762,46 @@ export function ProductForm({
               </select>
             </label>
           </div>
+
+          <fieldset className={styles.goalFieldset}>
+            <legend className={styles.label}>
+              أهداف التدريب
+            </legend>
+
+            <div className={styles.goalOptions}>
+              {TRAINING_GOALS.map((goal) => (
+                <label
+                  key={goal.value}
+                  className={styles.goalOption}
+                >
+                  <input
+                    type="checkbox"
+                    checked={trainingGoals.includes(
+                      goal.value,
+                    )}
+                    onChange={(event) =>
+                      setTrainingGoals((current) =>
+                        event.target.checked
+                          ? [
+                              ...current,
+                              goal.value,
+                            ]
+                          : current.filter(
+                              (value) =>
+                                value !== goal.value,
+                            ),
+                      )
+                    }
+                  />
+                  <span>{goal.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <span className={styles.hint}>
+              يمكن ربط المنتج بأكثر من هدف، أو تركها كلها غير محددة.
+            </span>
+          </fieldset>
 
           <div className={styles.grid2}>
             <label className={styles.field}>

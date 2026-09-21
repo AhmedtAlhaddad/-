@@ -5,11 +5,40 @@ import type {
 export const SHOP_PAGE_SIZE = 24;
 export const SEARCH_PAGE_SIZE = 20;
 
-export const goalOptions: TrainingGoal[] = [
-  "بناء عضلات",
-  "زيادة الوزن وقدرة التحمل",
-  "حرق الدهون وانقاص الوزن",
+export const trainingGoalDetails: Array<{
+  label: TrainingGoal;
+  description: string;
+  databaseValues: string[];
+}> = [
+  {
+    label: "بناء عضلات",
+    description:
+      "تصفح المنتجات المرتبطة بأهداف القوة والكتلة العضلية",
+    databaseValues: [
+      "muscle-building",
+      "muscle-support",
+    ],
+  },
+  {
+    label: "زيادة الوزن وقدرة التحمل",
+    description:
+      "تصفح الخيارات المرتبطة بالطاقة والأداء الرياضي",
+    databaseValues: [
+      "energy-endurance",
+      "energy",
+    ],
+  },
+  {
+    label: "حرق الدهون وانقاص الوزن",
+    description:
+      "تصفح الخيارات حسب احتياجاتك الغذائية والرياضية",
+    databaseValues: ["weight-management"],
+  },
 ];
+
+export const goalOptions = trainingGoalDetails.map(
+  (goal) => goal.label,
+);
 
 export const sortOptions = [
   "featured",
@@ -37,21 +66,6 @@ type RawSearchParams = Record<
   string,
   string | string[] | undefined
 >;
-
-const trainingGoals: Record<
-  TrainingGoal,
-  string[]
-> = {
-  "بناء عضلات": [
-    "muscle-support",
-    "muscle-building",
-  ],
-  "زيادة الوزن وقدرة التحمل": [
-    "energy-endurance",
-    "energy",
-  ],
-  "حرق الدهون وانقاص الوزن": ["weight-management"],
-};
 
 function values(
   value: string | string[] | undefined,
@@ -95,24 +109,35 @@ export function normalizeShopQuery(
   const requestedScope = Array.isArray(params.type)
     ? params.type[0]
     : params.type;
+  const productScope =
+    requestedScope === "supplements" ||
+    requestedScope === "accessories"
+      ? requestedScope
+      : null;
+  const categories =
+    productScope === "accessories"
+      ? []
+      : activeCategorySlugs.filter((item) =>
+          requestedCategories.includes(item),
+        );
+  const goals =
+    productScope === "accessories"
+      ? []
+      : goalOptions.filter((item) =>
+          requestedGoals.includes(item),
+        );
 
   return {
-    categories: activeCategorySlugs.filter((item) =>
-      requestedCategories.includes(item),
-    ),
-    goals: goalOptions.filter((item) =>
-      requestedGoals.includes(item),
-    ),
-    available: params.available === "1",
+    categories,
+    goals,
+    available:
+      productScope !== "accessories" &&
+      params.available === "1",
     sort:
       sortOptions.find(
         (item) => item === requestedSort,
       ) ?? "featured",
-    productScope:
-      requestedScope === "supplements" ||
-      requestedScope === "accessories"
-        ? requestedScope
-        : null,
+    productScope,
     page: normalizePage(params.page),
   };
 }
@@ -142,6 +167,29 @@ export function areCategoryParamsCanonical(
   );
 }
 
+export function areGoalParamsCanonical(
+  value: string | string[] | undefined,
+  goals: TrainingGoal[],
+) {
+  const requested = values(value);
+
+  return (
+    requested.length === goals.length &&
+    requested.every(
+      (goal, index) => goal === goals[index],
+    )
+  );
+}
+
+export function isAvailabilityParamCanonical(
+  value: string | string[] | undefined,
+  available: boolean,
+) {
+  return available
+    ? value === "1"
+    : value === undefined;
+}
+
 export function normalizeSearchQuery(
   value: string | string[] | undefined,
 ) {
@@ -156,7 +204,20 @@ export function normalizeSearchQuery(
 export function toTrainingGoals(
   goals: TrainingGoal[],
 ) {
-  return goals.flatMap((goal) => trainingGoals[goal]);
+  return goals.flatMap(
+    (goal) =>
+      trainingGoalDetails.find(
+        (detail) => detail.label === goal,
+      )?.databaseValues ?? [],
+  );
+}
+
+export function getTrainingGoalDetails(
+  goal: TrainingGoal,
+) {
+  return trainingGoalDetails.find(
+    (detail) => detail.label === goal,
+  );
 }
 
 export function buildShopHref(query: ShopQuery) {

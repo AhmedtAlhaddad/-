@@ -8,6 +8,7 @@ import { ProductGrid } from "@/components/products/product-card";
 import { CloseIcon, FilterIcon } from "@/components/ui/icons";
 import {
   buildShopHref,
+  getTrainingGoalDetails,
   goalOptions,
   type CatalogSort,
   type ShopQuery,
@@ -25,6 +26,7 @@ function Filters({
   onGoal,
   onAvailability,
   onClear,
+  hideGoals = false,
 }: {
   query: ShopQuery;
   categories: ShopCategoryOption[];
@@ -32,6 +34,7 @@ function Filters({
   onGoal: (value: TrainingGoal) => void;
   onAvailability: () => void;
   onClear: () => void;
+  hideGoals?: boolean;
 }) {
   return (
     <div className="filters">
@@ -54,19 +57,21 @@ function Filters({
         ))}
       </fieldset>
 
-      <fieldset>
-        <legend>هدف التدريب</legend>
-        {goalOptions.map((item) => (
-          <label key={item}>
-            <input
-              type="checkbox"
-              checked={query.goals.includes(item)}
-              onChange={() => onGoal(item)}
-            />
-            <span>{item}</span>
-          </label>
-        ))}
-      </fieldset>
+      {!hideGoals && (
+        <fieldset>
+          <legend>هدف التدريب</legend>
+          {goalOptions.map((item) => (
+            <label key={item}>
+              <input
+                type="checkbox"
+                checked={query.goals.includes(item)}
+                onChange={() => onGoal(item)}
+              />
+              <span>{item}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       <fieldset>
         <legend>التوفر</legend>
@@ -80,11 +85,6 @@ function Filters({
         </label>
       </fieldset>
 
-      <div className="member-card">
-        <b>مزايا الأعضاء</b>
-        <p>سجّل لتصلك العروض التي يحددها المتجر.</p>
-        <button>سجّل الآن</button>
-      </div>
     </div>
   );
 }
@@ -144,18 +144,27 @@ export function ShopPage({
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const isAccessories =
+    query.productScope === "accessories";
+  const scopedGoal =
+    query.productScope === null &&
+    query.goals.length === 1
+      ? getTrainingGoalDetails(query.goals[0])
+      : undefined;
   const heading =
-    query.productScope === "accessories"
+    scopedGoal?.label ??
+    (query.productScope === "accessories"
       ? "إكسسوارات اللياقة"
       : query.productScope === "supplements"
         ? "المكملات الغذائية"
-        : "كل المنتجات";
+        : "كل المنتجات");
   const description =
-    query.productScope === "accessories"
+    scopedGoal?.description ??
+    (query.productScope === "accessories"
       ? "استكشف إكسسوارات اللياقة المتاحة واختر ما يناسب تدريبك."
       : query.productScope === "supplements"
         ? "استكشف مجموعتنا المختارة من المكملات الغذائية لدعم احتياجاتك الرياضية."
-        : "استكشف مجموعتنا المختارة من المكملات الغذائية وإكسسوارات اللياقة.";
+        : "استكشف مجموعتنا المختارة من المكملات الغذائية وإكسسوارات اللياقة.");
 
   const navigate = (next: ShopQuery) => {
     startTransition(() => {
@@ -180,7 +189,7 @@ export function ShopPage({
   const clear = () => {
     navigate({
       categories: [],
-      goals: [],
+      goals: scopedGoal ? query.goals : [],
       available: false,
       sort: query.sort,
       productScope: query.productScope,
@@ -200,13 +209,21 @@ export function ShopPage({
         page: 1,
       }),
     onClear: clear,
+    hideGoals: Boolean(scopedGoal),
   };
 
   return (
     <main>
       <section className="collection-hero">
         <div className="container">
-          <span>الرئيسية / {heading}</span>
+          <nav
+            className="breadcrumbs collection-breadcrumbs"
+            aria-label="مسار التنقل"
+          >
+            <Link href="/">الرئيسية</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{heading}</span>
+          </nav>
           <h1>{heading}</h1>
           <p>{description}</p>
         </div>
@@ -222,7 +239,8 @@ export function ShopPage({
           >
             الكل
           </button>
-          {categories.map((category) => (
+          {!isAccessories &&
+            categories.map((category) => (
             <button
               className={
                 query.categories.includes(category.slug) ? "active" : ""
@@ -232,7 +250,7 @@ export function ShopPage({
             >
               {category.label}
             </button>
-          ))}
+            ))}
         </div>
       </nav>
 
@@ -241,13 +259,15 @@ export function ShopPage({
           متوفر <b>{total}</b> منتجًا
         </span>
         <div>
-          <button
-            className="filter-trigger"
-            onClick={() => setDrawer(true)}
-          >
-            <FilterIcon />
-            تصفية
-          </button>
+          {!isAccessories && (
+            <button
+              className="filter-trigger"
+              onClick={() => setDrawer(true)}
+            >
+              <FilterIcon />
+              تصفية
+            </button>
+          )}
           <label htmlFor="sort">ترتيب حسب</label>
           <select
             id="sort"
@@ -267,13 +287,21 @@ export function ShopPage({
         </div>
       </div>
 
-      <div className="container shop-layout">
-        <aside className="filter-sidebar">
-          <Filters {...filterProps} />
-        </aside>
+      <div
+        className={`container shop-layout${
+          isAccessories ? " shop-layout-wide" : ""
+        }`}
+      >
+        {!isAccessories && (
+          <aside className="filter-sidebar">
+            <Filters {...filterProps} />
+          </aside>
+        )}
 
         <section
-          className="shop-products"
+          className={`shop-products${
+            isAccessories ? " shop-products-wide" : ""
+          }`}
           aria-live="polite"
           aria-busy={isPending}
         >
@@ -294,7 +322,7 @@ export function ShopPage({
         </section>
       </div>
 
-      {drawer && (
+      {drawer && !isAccessories && (
         <div
           className="drawer-layer"
           role="dialog"

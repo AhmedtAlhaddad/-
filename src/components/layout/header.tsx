@@ -29,7 +29,7 @@ export function Header() {
             {nav.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}
           </nav>
           <div className="header-actions">
-            <Link className="icon-button" href="/search" aria-label="البحث"><SearchIcon /></Link>
+            <Link className="icon-button search-link" href="/search" aria-label="البحث"><SearchIcon /></Link>
             <Link className="cart-link" href="/cart"><BagIcon /><span className="desktop-label">سلة التسوق</span><b>{itemCount}</b></Link>
           </div>
         </div>

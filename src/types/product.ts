@@ -30,6 +30,7 @@ export interface CatalogProduct extends CartProduct {
   badge?: string;
   inStock: boolean;
   type: string;
+  storefrontScope: "supplements" | "accessories";
 }
 
 export interface SearchProduct {
@@ -44,5 +45,7 @@ export interface SearchProduct {
 
 export interface Product extends CatalogProduct {
   description: string;
+  nutritionFacts: string | null;
+  usageInstructions: string | null;
   features: string[];
 }
