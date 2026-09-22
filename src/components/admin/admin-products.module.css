@@ -74,6 +74,11 @@
   filter: brightness(1.04);
 }
 
+.addButton:active {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.98);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -556,6 +561,13 @@
 @media (max-width: 768px) {
   .page {
     --admin-section-gap: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .addButton:hover,
+  .addButton:active {
+    transform: none;
   }
 }
 

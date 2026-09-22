@@ -52,6 +52,19 @@
   background: #19c98b;
   color: #06130f;
   font-weight: 900;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.primaryButton:hover,
+.storeButton:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+}
+
+.primaryButton:active,
+.storeButton:active {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.98);
 }
 
 .stats {
@@ -176,11 +189,6 @@
   transition: transform 160ms ease, filter 160ms ease;
 }
 
-.storeButton:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-}
-
 @media (max-width: 1100px) {
   .stats,
   .actions {
@@ -215,5 +223,14 @@
 @media (max-width: 768px) {
   .page {
     --admin-section-gap: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton:hover,
+  .primaryButton:active,
+  .storeButton:hover,
+  .storeButton:active {
+    transform: none;
   }
 }
