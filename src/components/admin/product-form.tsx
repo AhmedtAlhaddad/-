@@ -248,15 +248,13 @@ export function ProductForm({
       initialData?.usage_instructions ?? "",
     );
 
-  const [productType, setProductType] =
-    useState(
-      initialData?.product_type ??
-        (productKind === "apparel"
-          ? "apparel"
-          : productKind === "accessory"
-            ? "fitness-accessory"
-            : "supplement"),
-    );
+  const productType =
+    initialData?.product_type ??
+    (productKind === "apparel"
+      ? "apparel"
+      : productKind === "accessory"
+        ? "fitness-accessory"
+        : "supplement");
 
   const [trainingGoals, setTrainingGoals] =
     useState(
@@ -751,38 +749,11 @@ export function ProductForm({
           <div className={styles.cardTitle}>
             <h2>إعدادات المنتج</h2>
             <p>
-              النوع والحالة وظهور المنتج في المتجر.
+              الحالة وظهور المنتج في المتجر. فئة المنتج الداخلية محددة تلقائيًا من مسار الإضافة.
             </p>
           </div>
 
           <div className={styles.grid2}>
-            <label className={styles.field}>
-              <span className={styles.label}>
-                نوع المنتج *
-              </span>
-
-              {isSupplement ? (
-                <select
-                  className={styles.select}
-                  value={productType}
-                  onChange={(event) => setProductType(event.target.value)}
-                  required
-                >
-                  <option value="supplement">مكمل غذائي عام</option>
-                  <option value="whey-protein">واي بروتين</option>
-                  <option value="creatine">كرياتين</option>
-                  <option value="pre-workout">ما قبل التمرين</option>
-                  <option value="bcaa">أحماض أمينية BCAA</option>
-                </select>
-              ) : (
-                <input
-                  className={styles.input}
-                  value={productKind === "apparel" ? "ملابس رياضية" : "إكسسوار رياضي"}
-                  readOnly
-                />
-              )}
-            </label>
-
             <label className={styles.field}>
               <span className={styles.label}>
                 الحالة
@@ -1206,85 +1177,83 @@ export function ProductForm({
                     </label>
                   </div>
 
-                  <div className={styles.grid4}>
-                    {(productKind !== "accessory" || accessoryUsesSize) && <>
-                    <label className={styles.field}>
-                      <span className={styles.label}>
-                        المقاس بالعربي
-                      </span>
+                  {!isSupplement && (
+                    <div className={styles.grid4}>
+                      {(productKind === "apparel" || accessoryUsesSize) && <>
+                        <label className={styles.field}>
+                          <span className={styles.label}>
+                            المقاس بالعربي
+                          </span>
 
-                      <input
-                        className={styles.input}
-                        value={
-                          variant.size_label_ar
-                        }
-                        onChange={(event) =>
-                          updateVariant(
-                            variant.key,
-                            "size_label_ar",
-                            event.target.value,
-                          )
-                        }
-                      />
-                    </label>
+                          <input
+                            className={styles.input}
+                            value={variant.size_label_ar}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "size_label_ar",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
 
-                    <label className={styles.field}>
-                      <span className={styles.label}>
-                        المقاس بالإنجليزية (Size)
-                      </span>
+                        <label className={styles.field}>
+                          <span className={styles.label}>
+                            المقاس بالإنجليزية (Size)
+                          </span>
 
-                      <input
-                        className={styles.input}
-                        value={
-                          variant.size_label_en
-                        }
-                        onChange={(event) =>
-                          updateVariant(
-                            variant.key,
-                            "size_label_en",
-                            event.target.value,
-                          )
-                        }
-                      />
-                    </label>
-                    </>}
+                          <input
+                            className={styles.input}
+                            value={variant.size_label_en}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "size_label_en",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </>}
 
-                    <label className={styles.field}>
-                      <span className={styles.label}>
-                        اللون بالعربي
-                      </span>
+                      <label className={styles.field}>
+                        <span className={styles.label}>
+                          اللون بالعربي
+                        </span>
 
-                      <input
-                        className={styles.input}
-                        value={variant.color_ar}
-                        onChange={(event) =>
-                          updateVariant(
-                            variant.key,
-                            "color_ar",
-                            event.target.value,
-                          )
-                        }
-                      />
-                    </label>
+                        <input
+                          className={styles.input}
+                          value={variant.color_ar}
+                          onChange={(event) =>
+                            updateVariant(
+                              variant.key,
+                              "color_ar",
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </label>
 
-                    <label className={styles.field}>
-                      <span className={styles.label}>
-                        اللون بالإنجليزية (Color)
-                      </span>
+                      <label className={styles.field}>
+                        <span className={styles.label}>
+                          اللون بالإنجليزية (Color)
+                        </span>
 
-                      <input
-                        className={styles.input}
-                        value={variant.color_en}
-                        onChange={(event) =>
-                          updateVariant(
-                            variant.key,
-                            "color_en",
-                            event.target.value,
-                          )
-                        }
-                      />
-                    </label>
-                  </div>
+                        <input
+                          className={styles.input}
+                          value={variant.color_en}
+                          onChange={(event) =>
+                            updateVariant(
+                              variant.key,
+                              "color_en",
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  )}
                 </article>
               ),
             )}

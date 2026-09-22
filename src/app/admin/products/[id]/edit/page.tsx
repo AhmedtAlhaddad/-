@@ -125,6 +125,7 @@ export default async function Page({
         .select(
           "id, slug, name_ar, name_en",
         )
+        .eq("active", true)
         .order(
           "sort_order",
           {

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import styles from "@/components/admin/admin-products.module.css";
+import { ProductRemovalAction } from "@/components/admin/product-removal-action";
 import { requireAdmin } from "@/lib/admin/require-admin";
 
 export const metadata: Metadata = {
@@ -1101,6 +1102,11 @@ export default async function Page({
                                 عرض
                               </Link>
                             )}
+
+                            <ProductRemovalAction
+                              productId={product.id}
+                              productName={product.name_ar}
+                            />
                           </div>
                         </td>
                       </tr>

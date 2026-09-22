@@ -28,6 +28,12 @@ const ALLOWED_TRAINING_GOALS = new Set([
   "weight-management",
 ]);
 
+const ALLOWED_PRODUCT_TYPES = new Set([
+  "supplement",
+  "apparel",
+  "fitness-accessory",
+]);
+
 const MAX_PRODUCT_CONTENT_LENGTH = 10000;
 
 function text(
@@ -216,6 +222,13 @@ export async function POST(
     text(
       payload.product_type,
     );
+
+  if (!ALLOWED_PRODUCT_TYPES.has(productType)) {
+    return NextResponse.json(
+      { error: "مسار إضافة المنتج غير صالح." },
+      { status: 400 },
+    );
+  }
 
   const nutritionFacts =
     nullableText(

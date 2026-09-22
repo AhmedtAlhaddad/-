@@ -1,6 +1,8 @@
 ﻿.page {
+  --admin-section-gap: 24px;
+
   display: grid;
-  gap: 36px;
+  gap: var(--admin-section-gap);
   direction: rtl;
 }
 
@@ -20,7 +22,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 10px 12px;
 }
 
 .eyebrow {
@@ -71,7 +73,6 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 4px;
 }
 
 .stat {
@@ -344,6 +345,7 @@
 .actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
 }
 
@@ -365,6 +367,33 @@
 .actionLink:hover {
   color: #ffffff;
   border-color: rgba(34, 207, 145, 0.28);
+}
+
+.deleteButton {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 105, 105, 0.2);
+  border-radius: 9px;
+  background: rgba(255, 84, 84, 0.06);
+  color: #ffaaaa;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.deleteButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.actionError {
+  flex-basis: 100%;
+  max-width: 220px;
+  color: #ffaaaa;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .empty {
@@ -473,7 +502,7 @@
 
 @media (max-width: 680px) {
   .page {
-    gap: 22px;
+    --admin-section-gap: 16px;
   }
 
   .toolbar {

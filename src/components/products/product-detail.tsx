@@ -181,11 +181,15 @@ export function ProductDetail({
         variant.stock,
       );
 
-    addItem(
+    const succeeded = addItem(
       product,
       variant.id,
       safeQuantity,
     );
+
+    if (!succeeded) {
+      return;
+    }
 
     setAdded(true);
 

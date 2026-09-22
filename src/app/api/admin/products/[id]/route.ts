@@ -135,6 +135,118 @@ function postgresMessage(
   return fallback;
 }
 
+type AdminAuthorization =
+  | {
+      supabase: Awaited<ReturnType<typeof createClient>>;
+      response: null;
+    }
+  | {
+      supabase: null;
+      response: NextResponse;
+    };
+
+async function authorizeAdmin(): Promise<AdminAuthorization> {
+  const supabase = await createClient();
+  const {
+    data: claimsData,
+    error: claimsError,
+  } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+
+  if (claimsError || !userId) {
+    return {
+      supabase: null,
+      response: errorResponse("يجب تسجيل الدخول أولًا.", 401),
+    };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role, active")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (
+    profileError ||
+    !profile ||
+    profile.role !== "admin" ||
+    profile.active !== true
+  ) {
+    return {
+      supabase: null,
+      response: errorResponse("ليس لديك صلاحية الإدارة.", 403),
+    };
+  }
+
+  return { supabase, response: null };
+}
+
+function removalErrorStatus(code: string | undefined) {
+  if (code === "P0002") {
+    return 404;
+  }
+
+  if (code === "42501") {
+    return 403;
+  }
+
+  return 400;
+}
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+  const authorization = await authorizeAdmin();
+
+  if (authorization.response) {
+    return authorization.response;
+  }
+
+  const { data, error } = await authorization.supabase.rpc(
+    "get_admin_product_removal_plan",
+    { p_product_id: id },
+  );
+
+  if (error) {
+    return errorResponse(
+      error.message,
+      removalErrorStatus(error.code),
+    );
+  }
+
+  return NextResponse.json({ plan: data });
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+  const authorization = await authorizeAdmin();
+
+  if (authorization.response) {
+    return authorization.response;
+  }
+
+  const { data, error } = await authorization.supabase.rpc(
+    "remove_admin_product",
+    { p_product_id: id },
+  );
+
+  if (error) {
+    return errorResponse(
+      error.message,
+      removalErrorStatus(error.code),
+    );
+  }
+
+  revalidatePublicCatalog();
+
+  return NextResponse.json({ result: data });
+}
+
 export async function PATCH(
   request: Request,
   context: {
@@ -204,7 +316,7 @@ export async function PATCH(
   } =
     await supabase
       .from("products")
-      .select("id")
+      .select("id, product_type")
       .eq(
         "id",
         id,
@@ -284,7 +396,7 @@ export async function PATCH(
 
   const productType =
     text(
-      payload.product_type,
+      existingProduct.product_type,
     );
 
   const nutritionFacts =
@@ -346,7 +458,7 @@ export async function PATCH(
     !productType
   ) {
     return errorResponse(
-      "الوصف المختصر ونوع المنتج مطلوبان.",
+      "الوصف المختصر مطلوب، وفئة المنتج الداخلية المخزنة غير صالحة.",
     );
   }
 

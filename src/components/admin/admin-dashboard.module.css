@@ -1,6 +1,8 @@
 ﻿.page {
+  --admin-section-gap: 24px;
+
   display: grid;
-  gap: 38px;
+  gap: var(--admin-section-gap);
 }
 
 .heading {
@@ -179,7 +181,7 @@
 
 @media (max-width: 640px) {
   .page {
-    gap: 24px;
+    --admin-section-gap: 16px;
   }
 
   .heading {

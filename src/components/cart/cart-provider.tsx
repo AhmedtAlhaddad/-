@@ -20,7 +20,7 @@ interface CartContextValue {
     product: CartProduct,
     variantId: string,
     quantity?: number,
-  ) => void;
+  ) => boolean;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -271,11 +271,16 @@ export function CartProvider({
       (entry) => entry.id === variantId,
     );
 
-    if (!variant || quantity < 1) {
-      return;
+    if (
+      !variant ||
+      quantity < 1 ||
+      variant.stock < quantity
+    ) {
+      return false;
     }
 
     const id = `${product.id}-${variantId}`;
+    let added = false;
 
     updateCart((current) => {
       const existing = current.find(
@@ -283,6 +288,12 @@ export function CartProvider({
       );
 
       if (existing) {
+        if (existing.quantity + quantity > variant.stock) {
+          return current;
+        }
+
+        added = true;
+
         return current.map((item) =>
           item.id === id
             ? {
@@ -292,6 +303,8 @@ export function CartProvider({
             : item,
         );
       }
+
+      added = true;
 
       return [
         ...current,
@@ -304,7 +317,13 @@ export function CartProvider({
       ];
     });
 
+    if (!added) {
+      return false;
+    }
+
     playAddToCartSound();
+
+    return true;
   };
 
   const updateQuantity = (
