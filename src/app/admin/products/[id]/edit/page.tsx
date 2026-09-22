@@ -50,7 +50,7 @@ export default async function Page({
   const {
     supabase,
   } =
-    await requireAdmin();
+    await requireAdmin(`/admin/products/${id}/edit`);
 
   const [
     productResult,

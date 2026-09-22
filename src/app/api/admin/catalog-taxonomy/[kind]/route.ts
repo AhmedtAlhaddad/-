@@ -2,13 +2,10 @@ import {
   NextResponse,
 } from "next/server";
 
+import { authorizeAdminApi } from "@/lib/admin/auth";
 import {
   revalidatePublicCatalog,
 } from "@/lib/supabase/revalidate-catalog";
-
-import {
-  createClient,
-} from "@/lib/supabase/server";
 
 type Kind =
   | "brands"
@@ -98,8 +95,16 @@ function postgresMessage(
 }
 
 async function getAdminClient() {
-  const supabase =
-    await createClient();
+  const gate = await authorizeAdminApi();
+
+  if (gate.response) {
+    return {
+      supabase: null,
+      response: gate.response,
+    };
+  }
+
+  const supabase = gate.supabase;
 
   const {
     data: claimsData,

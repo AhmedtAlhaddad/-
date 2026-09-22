@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { authorizeAdminApi } from "@/lib/admin/auth";
 import { createClient } from "@/lib/supabase/server";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -101,7 +102,16 @@ function postgresMessage(code: string | undefined, fallback: string) {
 }
 
 async function getAdminClient() {
-  const supabase = await createClient();
+  const gate = await authorizeAdminApi();
+
+  if (gate.response) {
+    return {
+      supabase: null,
+      response: gate.response,
+    };
+  }
+
+  const supabase = gate.supabase;
   const { data: claimsData, error: claimsError } =
     await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;

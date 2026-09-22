@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { authorizeAdminApi } from "@/lib/admin/auth";
 import {
   revalidatePublicCatalog,
 } from "@/lib/supabase/revalidate-catalog";
@@ -145,7 +146,16 @@ type AdminAuthorization =
     };
 
 async function authorizeAdmin(): Promise<AdminAuthorization> {
-  const supabase = await createClient();
+  const gate = await authorizeAdminApi();
+
+  if (gate.response) {
+    return {
+      supabase: null,
+      response: gate.response,
+    };
+  }
+
+  const supabase = gate.supabase;
   const {
     data: claimsData,
     error: claimsError,
@@ -292,8 +302,13 @@ export async function PATCH(
   } =
     await context.params;
 
-  const supabase =
-    await createClient();
+  const authorization = await authorizeAdminApi();
+
+  if (authorization.response) {
+    return authorization.response;
+  }
+
+  const supabase = authorization.supabase;
 
   const {
     data: claimsData,

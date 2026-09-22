@@ -4,6 +4,12 @@ import {
   type NextRequest,
 } from "next/server";
 
+import {
+  ADMIN_GATE_COOKIE,
+  safeAdminReturnTo,
+  verifyAdminGateToken,
+} from "@/lib/admin/auth";
+
 export async function proxy(
   request: NextRequest,
 ) {
@@ -69,7 +75,59 @@ export async function proxy(
       },
     );
 
-  await supabase.auth.getClaims();
+  const { data: claimsData } = await supabase.auth.getClaims();
+
+  const pathname = request.nextUrl.pathname;
+  const isAdminPage =
+    pathname === "/admin" ||
+    (pathname.startsWith("/admin/") && pathname !== "/admin/login");
+  const isAdminLogin = pathname === "/admin/login";
+
+  if (isAdminLogin && request.cookies.has(ADMIN_GATE_COOKIE)) {
+    const userId = claimsData?.claims?.sub;
+    let gateValid = false;
+
+    try {
+      gateValid = verifyAdminGateToken(
+        request.cookies.get(ADMIN_GATE_COOKIE)?.value,
+        userId ?? "",
+      );
+    } catch {
+      gateValid = false;
+    }
+
+    if (!gateValid) {
+      supabaseResponse.cookies.delete(ADMIN_GATE_COOKIE);
+    }
+  }
+
+  if (isAdminPage) {
+    const userId = claimsData?.claims?.sub;
+    let gateValid = false;
+
+    try {
+      gateValid = verifyAdminGateToken(
+        request.cookies.get(ADMIN_GATE_COOKIE)?.value,
+        userId ?? "",
+      );
+    } catch {
+      gateValid = false;
+    }
+
+    if (!userId || !gateValid) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/admin/login";
+      loginUrl.search = "";
+      loginUrl.searchParams.set(
+        "returnTo",
+        safeAdminReturnTo(pathname + request.nextUrl.search),
+      );
+
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.delete(ADMIN_GATE_COOKIE);
+      return response;
+    }
+  }
 
   return supabaseResponse;
 }

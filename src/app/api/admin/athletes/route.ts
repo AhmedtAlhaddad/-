@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { createClient } from "@/lib/supabase/server";
+import { authorizeAdminApi } from "@/lib/admin/auth";
 
 type AthleteInput = {
   displayName: string;
@@ -26,7 +26,16 @@ function isUuid(value: string) {
 }
 
 async function getAdminClient() {
-  const supabase = await createClient();
+  const gate = await authorizeAdminApi();
+
+  if (gate.response) {
+    return {
+      supabase: null,
+      error: gate.response,
+    };
+  }
+
+  const supabase = gate.supabase;
   const { data: claimsData, error: claimsError } =
     await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;

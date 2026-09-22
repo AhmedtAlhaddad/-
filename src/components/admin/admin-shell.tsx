@@ -11,10 +11,6 @@ import type {
   ReactNode,
 } from "react";
 
-import {
-  createClient,
-} from "@/lib/supabase/browser";
-
 import styles from "./admin-shell.module.css";
 
 const navItems = [
@@ -100,16 +96,17 @@ export function AdminShell({
   }
 
   async function signOut() {
-    const supabase =
-      createClient();
+    try {
+      await fetch("/api/admin/logout", {
+        method: "POST",
+      });
+    } finally {
+      router.replace(
+        "/admin/login",
+      );
 
-    await supabase.auth.signOut();
-
-    router.replace(
-      "/admin/login",
-    );
-
-    router.refresh();
+      router.refresh();
+    }
   }
 
   return (

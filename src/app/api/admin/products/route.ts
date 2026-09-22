@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { authorizeAdminApi } from "@/lib/admin/auth";
 import {
   revalidatePublicCatalog,
 } from "@/lib/supabase/revalidate-catalog";
-
-import { createClient } from "@/lib/supabase/server";
 
 const ALLOWED_STATUSES = new Set([
   "draft",
@@ -93,8 +92,13 @@ function postgresMessage(
 export async function POST(
   request: Request,
 ) {
-  const supabase =
-    await createClient();
+  const authorization = await authorizeAdminApi();
+
+  if (authorization.response) {
+    return authorization.response;
+  }
+
+  const supabase = authorization.supabase;
 
   const {
     data: claimsData,

@@ -165,7 +165,7 @@ export default async function Page({
   const {
     supabase,
   } =
-    await requireAdmin();
+    await requireAdmin("/admin/products");
 
   const params =
     await searchParams;

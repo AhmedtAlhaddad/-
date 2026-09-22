@@ -35,7 +35,7 @@ type ProductTargetRow = {
 };
 
 export default async function Page() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin("/admin/discounts");
 
   const [
     discountsResult,

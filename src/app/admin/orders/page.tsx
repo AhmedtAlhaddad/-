@@ -49,7 +49,7 @@ type CommissionRow = Omit<
 };
 
 export default async function Page() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin("/admin/orders");
 
   const [ordersResult, itemsResult, athletesResult, commissionsResult] =
     await Promise.all([

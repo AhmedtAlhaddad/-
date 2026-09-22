@@ -30,7 +30,7 @@ export default async function Page({
       ? requestedType
       : "supplement";
   const { supabase } =
-    await requireAdmin();
+    await requireAdmin("/admin/products/new");
 
   const [
     brandsResult,

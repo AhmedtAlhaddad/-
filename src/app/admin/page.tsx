@@ -1,9 +1,7 @@
 ﻿import type { Metadata } from "next";
 
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/admin/require-admin";
 
 import styles from "@/components/admin/admin-dashboard.module.css";
 
@@ -19,48 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const supabase =
-    await createClient();
-
-  const {
-    data: claimsData,
-    error: claimsError,
-  } =
-    await supabase.auth.getClaims();
-
-  const userId =
-    claimsData?.claims?.sub;
-
-  if (
-    claimsError ||
-    !userId
-  ) {
-    redirect("/admin/login");
-  }
-
-  const {
-    data: profile,
-    error: profileError,
-  } =
-    await supabase
-      .from("profiles")
-      .select(
-        "role, active",
-      )
-      .eq(
-        "user_id",
-        userId,
-      )
-      .maybeSingle();
-
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== "admin" ||
-    profile.active !== true
-  ) {
-    redirect("/admin/login");
-  }
+  const { supabase } = await requireAdmin("/admin");
 
   const [
     productsResult,

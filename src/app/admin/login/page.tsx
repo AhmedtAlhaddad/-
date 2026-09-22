@@ -1,53 +1,37 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminLogin } from "@/components/admin/admin-login";
-import { createClient } from "@/lib/supabase/server";
+import {
+  getAdminAuthorization,
+  safeAdminReturnTo,
+} from "@/lib/admin/auth";
 
 export const metadata: Metadata = {
   title: "تسجيل دخول الإدارة",
-
   robots: {
     index: false,
     follow: false,
   },
 };
 
-export const dynamic =
-  "force-dynamic";
+export const dynamic = "force-dynamic";
 
-export default async function Page() {
-  const supabase =
-    await createClient();
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const params = await searchParams;
+  const authorization = await getAdminAuthorization();
 
-  const {
-    data: claimsData,
-  } =
-    await supabase.auth.getClaims();
-
-  const userId =
-    claimsData?.claims?.sub;
-
-  if (userId) {
-    const {
-      data: profile,
-    } =
-      await supabase
-        .from("profiles")
-        .select("role, active")
-        .eq(
-          "user_id",
-          userId,
-        )
-        .maybeSingle();
-
-    if (
-      profile?.role === "admin" &&
-      profile.active === true
-    ) {
-      redirect("/admin");
-    }
+  if (!("kind" in authorization)) {
+    redirect(safeAdminReturnTo(params.returnTo));
   }
 
-  return <AdminLogin />;
+  return (
+    <AdminLogin
+      returnTo={safeAdminReturnTo(params.returnTo)}
+    />
+  );
 }

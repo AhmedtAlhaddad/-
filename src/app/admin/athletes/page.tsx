@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin("/admin/athletes");
 
   const { data, error } = await supabase
     .from("athletes")

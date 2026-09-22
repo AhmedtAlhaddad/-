@@ -38,7 +38,7 @@ type PayoutItemRow = Omit<PayoutItem, "amount"> & {
 };
 
 export default async function Page() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin("/admin/commissions");
 
   const [
     commissionsResult,
