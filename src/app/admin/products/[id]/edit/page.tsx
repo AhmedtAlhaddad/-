@@ -149,6 +149,10 @@ export default async function Page({
     notFound();
   }
 
+  if (productResult.data.status === "archived") {
+    notFound();
+  }
+
   if (
     variantsResult.error
   ) {

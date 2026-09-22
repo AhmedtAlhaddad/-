@@ -80,7 +80,8 @@ type VariantRow = {
 
 type MovementRow = {
   id: number;
-  variant_id: string;
+  variant_id: string | null;
+  sku_snapshot: string;
   quantity_change: number;
   stock_after: number;
   reason: string;
@@ -333,7 +334,7 @@ export default async function Page({
           "inventory_movements",
         )
         .select(
-          "id, variant_id, quantity_change, stock_after, reason, note, actor_user_id, created_at",
+          "id, variant_id, sku_snapshot, quantity_change, stock_after, reason, note, actor_user_id, created_at",
         )
         .order(
           "created_at",
@@ -1137,9 +1138,11 @@ export default async function Page({
                   {movements.map(
                     (movement) => {
                       const variant =
-                        variantMap.get(
-                          movement.variant_id,
-                        );
+                        movement.variant_id
+                          ? variantMap.get(
+                              movement.variant_id,
+                            )
+                          : undefined;
 
                       const product =
                         variant
@@ -1169,7 +1172,7 @@ export default async function Page({
                             >
                               {
                                 variant?.sku ??
-                                movement.variant_id
+                                movement.sku_snapshot
                               }
                             </code>
                           </td>

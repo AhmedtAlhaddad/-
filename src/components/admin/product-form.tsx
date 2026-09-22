@@ -776,9 +776,6 @@ export function ProductForm({
                   نشط
                 </option>
 
-                <option value="archived">
-                  مؤرشف
-                </option>
               </select>
             </label>
           </div>

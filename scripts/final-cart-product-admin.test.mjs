@@ -77,33 +77,34 @@ test("variant controls and validation are family-specific", () => {
   }
 });
 
-test("product removal is previewed but decided again by the trusted database function", () => {
+test("product removal confirms once and delegates final deletion to the trusted database function", () => {
   const action = read("src/components/admin/product-removal-action.tsx");
   const route = read("src/app/api/admin/products/[id]/route.ts");
-  const migration = read("supabase/migrations/014_safe_product_removal.sql");
+  const migration = read("supabase/migrations/015_true_product_deletion.sql");
 
-  assert.match(action, /method:\s*"GET"/);
+  assert.doesNotMatch(action, /method:\s*"GET"/);
   assert.match(action, /window\.confirm\(message\)/);
   assert.match(action, /method:\s*"DELETE"/);
-  assert.match(action, /الطلبات ومبالغ العمولات والمدفوعات والسجلات التاريخية محفوظة/);
-  assert.match(route, /"get_admin_product_removal_plan"/);
+  assert.match(action, /message = .*productName/);
   assert.match(route, /"remove_admin_product"/);
-  assert.match(migration, /select p\.slug[\s\S]*for update;/s);
-  assert.match(migration, /from public\.product_variants pv[\s\S]*for update;/s);
-  assert.match(migration, /if v_has_order_history[\s\S]*or v_has_inventory_history[\s\S]*or v_has_stored_images then/s);
+  assert.match(migration, /select product\.slug[\s\S]*for update;/s);
+  assert.match(migration, /from public\.product_variants variant[\s\S]*for update;/s);
+  assert.match(migration, /security invoker/);
 });
 
-test("retirement disables new sales while hard delete cleans only safe operational rows", () => {
-  const migration = read("supabase/migrations/014_safe_product_removal.sql");
+test("true deletion cleans current catalog rows while preserving every historical ledger", () => {
+  const migration = read("supabase/migrations/015_true_product_deletion.sql");
 
-  assert.match(migration, /set status = 'archived',[\s\n]*featured = false/);
-  assert.match(migration, /update public\.product_variants[\s\S]*set active = false/s);
   assert.match(migration, /delete from public\.discount_code_products/);
   assert.match(migration, /delete from public\.product_training_goals/);
   assert.match(migration, /delete from public\.product_images/);
   assert.match(migration, /delete from public\.product_variants/);
   assert.match(migration, /delete from public\.products/);
   assert.doesNotMatch(migration, /delete from public\.(orders|order_items|commissions|commission_payouts|commission_payout_items|inventory_movements)/);
+  assert.match(migration, /on delete set null/);
+  assert.match(migration, /sku_snapshot/);
+  assert.match(migration, /prevent_inventory_movement_mutation/);
+  assert.match(migration, /prevent_order_item_mutation/);
 });
 
 test("existing immutable order, commission, payout, and athlete history remains protected", () => {
@@ -122,14 +123,26 @@ test("existing immutable order, commission, payout, and athlete history remains 
 });
 
 test("removal RPCs use admin authorization, restricted grants, and no anonymous mutation", () => {
-  const migration = read("supabase/migrations/014_safe_product_removal.sql");
+  const migration = read("supabase/migrations/015_true_product_deletion.sql");
 
-  assert.match(migration, /security definer[\s\S]*set search_path = ''/s);
-  assert.equal((migration.match(/if not public\.is_admin\(\)/g) ?? []).length, 2);
+  assert.match(migration, /security invoker[\s\S]*set search_path = ''/s);
+  assert.equal((migration.match(/if not public\.is_admin\(\)/g) ?? []).length, 1);
   assert.match(migration, /revoke all on function public\.remove_admin_product\(uuid\) from public/);
   assert.match(migration, /grant execute on function public\.remove_admin_product\(uuid\) to authenticated/);
   assert.doesNotMatch(migration, /grant execute[\s\S]{0,100}\bto anon\b/);
   assert.doesNotMatch(migration, /service_role/i);
+});
+
+test("archived product workflow is removed from normal Admin Products UX", () => {
+  const page = read("src/app/admin/products/page.tsx");
+  const form = read("src/components/admin/product-form.tsx");
+  const editPage = read("src/app/admin/products/[id]/edit/page.tsx");
+
+  assert.doesNotMatch(page, /archivedResult/);
+  assert.doesNotMatch(page, /id:\s*"archived"/);
+  assert.doesNotMatch(form, /option value="archived"/);
+  assert.match(page, /product\.status !== "archived"/);
+  assert.match(editPage, /productResult\.data\.status === "archived"/);
 });
 
 test("admin section rhythm is exactly 24px desktop and 16px mobile without overlap hacks", () => {

@@ -139,7 +139,7 @@ function statusLabel(
   }
 
   if (status === "archived") {
-    return "مؤرشف";
+    return "غير متاح";
   }
 
   return status;
@@ -180,7 +180,6 @@ export default async function Page({
     "all",
     "active",
     "draft",
-    "archived",
   ];
 
   const status =
@@ -219,7 +218,6 @@ export default async function Page({
     totalResult,
     activeResult,
     draftResult,
-    archivedResult,
   ] =
     await Promise.all([
       productsQuery,
@@ -286,19 +284,6 @@ export default async function Page({
           "draft",
         ),
 
-      supabase
-        .from("products")
-        .select(
-          "id",
-          {
-            count: "exact",
-            head: true,
-          },
-        )
-        .eq(
-          "status",
-          "archived",
-        ),
     ]);
 
   if (productsResult.error) {
@@ -548,10 +533,6 @@ export default async function Page({
       id: "draft",
       label: "المسودات",
     },
-    {
-      id: "archived",
-      label: "المؤرشفة",
-    },
   ];
 
   return (
@@ -655,20 +636,6 @@ export default async function Page({
           </strong>
         </article>
 
-        <article
-          className={
-            styles.stat
-          }
-        >
-          <span>
-            المؤرشفة
-          </span>
-
-          <strong>
-            {archivedResult.count ??
-              0}
-          </strong>
-        </article>
       </section>
 
       <section
@@ -1085,14 +1052,16 @@ export default async function Page({
                               styles.actions
                             }
                           >
-                            <Link
-                              href={`/admin/products/${product.id}/edit`}
-                              className={
-                                styles.actionLink
-                              }
-                            >
-                              تعديل
-                            </Link>
+                            {product.status !== "archived" && (
+                              <Link
+                                href={`/admin/products/${product.id}/edit`}
+                                className={
+                                  styles.actionLink
+                                }
+                              >
+                                تعديل
+                              </Link>
+                            )}
 
                             {product.status ===
                               "active" && (

@@ -10,7 +10,6 @@ const STATUSES =
   new Set([
     "draft",
     "active",
-    "archived",
   ]);
 
 const UNITS =
@@ -193,32 +192,6 @@ function removalErrorStatus(code: string | undefined) {
   return 400;
 }
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
-  const { id } = await context.params;
-  const authorization = await authorizeAdmin();
-
-  if (authorization.response) {
-    return authorization.response;
-  }
-
-  const { data, error } = await authorization.supabase.rpc(
-    "get_admin_product_removal_plan",
-    { p_product_id: id },
-  );
-
-  if (error) {
-    return errorResponse(
-      error.message,
-      removalErrorStatus(error.code),
-    );
-  }
-
-  return NextResponse.json({ plan: data });
-}
-
 export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
@@ -230,6 +203,27 @@ export async function DELETE(
     return authorization.response;
   }
 
+  const imageRowsResult = await authorization.supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", id);
+
+  if (imageRowsResult.error) {
+    return errorResponse(imageRowsResult.error.message, 500);
+  }
+
+  const candidateStoragePaths = Array.from(
+    new Set(
+      (imageRowsResult.data ?? [])
+        .map((image) => image.storage_path)
+        .filter(
+          (path): path is string =>
+            typeof path === "string" &&
+            path.startsWith(`products/${id}/`),
+        ),
+    ),
+  );
+
   const { data, error } = await authorization.supabase.rpc(
     "remove_admin_product",
     { p_product_id: id },
@@ -240,6 +234,44 @@ export async function DELETE(
       error.message,
       removalErrorStatus(error.code),
     );
+  }
+
+  if (candidateStoragePaths.length > 0) {
+    const referencesResult = await authorization.supabase
+      .from("product_images")
+      .select("storage_path")
+      .in("storage_path", candidateStoragePaths);
+
+    if (referencesResult.error) {
+      console.warn(
+        "Product catalog row deleted, but image ownership could not be rechecked:",
+        referencesResult.error.message,
+      );
+    } else {
+      const referencedPaths = new Set(
+        (referencesResult.data ?? [])
+          .map((reference) => reference.storage_path)
+          .filter(
+            (path): path is string => typeof path === "string",
+          ),
+      );
+      const ownedStoragePaths = candidateStoragePaths.filter(
+        (path) => !referencedPaths.has(path),
+      );
+
+      if (ownedStoragePaths.length > 0) {
+        const { error: storageError } = await authorization.supabase.storage
+          .from("product-images")
+          .remove(ownedStoragePaths);
+
+        if (storageError) {
+          console.warn(
+            "Product catalog row deleted, but owned image cleanup needs retry:",
+            storageError.message,
+          );
+        }
+      }
+    }
   }
 
   revalidatePublicCatalog();

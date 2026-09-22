@@ -9,7 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 const ALLOWED_STATUSES = new Set([
   "draft",
   "active",
-  "archived",
 ]);
 
 const ALLOWED_WEIGHT_UNITS = new Set([
