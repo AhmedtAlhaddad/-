@@ -589,6 +589,9 @@ export default async function Page({
           </p>
         </div>
 
+      </section>
+
+      <section className={styles.createActionsSection}>
         <div className={styles.createActions}>
           <Link href="/admin/products/new?type=supplement" className={styles.addButton}>
             + إضافة مكمل

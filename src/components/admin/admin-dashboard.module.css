@@ -12,6 +12,11 @@
   gap: 20px;
 }
 
+.actionsSection {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .headingCopy {
   display: grid;
   gap: 7px;
@@ -89,7 +94,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 4px;
+}
+
+.quickActionsSection {
+  display: grid;
+  gap: 16px;
 }
 
 .sectionTitle h2 {
@@ -200,5 +209,11 @@
 
   .storeButton {
     width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    --admin-section-gap: 16px;
   }
 }

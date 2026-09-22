@@ -182,7 +182,9 @@ export default async function Page() {
             وإجراءات الإدارة اليومية.
           </p>
         </div>
+      </section>
 
+      <section className={styles.actionsSection}>
         <Link
           href="/admin/products"
           className={styles.primaryButton}
@@ -249,32 +251,34 @@ export default async function Page() {
         </article>
       </section>
 
-      <div className={styles.sectionTitle}>
-        <h2>
-          إجراءات سريعة
-        </h2>
-      </div>
+      <section className={styles.quickActionsSection}>
+        <div className={styles.sectionTitle}>
+          <h2>
+            إجراءات سريعة
+          </h2>
+        </div>
 
-      <section className={styles.actions}>
-        {actions.map((action) => (
-          <Link
-            href={action.href}
-            className={styles.action}
-            key={action.href}
-          >
-            <span className={styles.actionIcon}>
-              {action.icon}
-            </span>
+        <div className={styles.actions}>
+          {actions.map((action) => (
+            <Link
+              href={action.href}
+              className={styles.action}
+              key={action.href}
+            >
+              <span className={styles.actionIcon}>
+                {action.icon}
+              </span>
 
-            <strong>
-              {action.title}
-            </strong>
+              <strong>
+                {action.title}
+              </strong>
 
-            <span>
-              {action.description}
-            </span>
-          </Link>
-        ))}
+              <span>
+                {action.description}
+              </span>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <section className={styles.storeAction}>

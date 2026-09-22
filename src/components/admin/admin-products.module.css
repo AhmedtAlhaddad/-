@@ -13,6 +13,11 @@
   gap: 20px;
 }
 
+.createActionsSection {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .headingCopy {
   display: grid;
   gap: 7px;
@@ -519,6 +524,14 @@
     grid-template-columns: 1fr;
   }
 
+  .createActionsSection {
+    display: block;
+  }
+
+  .createActions {
+    width: 100%;
+  }
+
   .addButton {
     width: 100%;
   }
@@ -537,6 +550,12 @@
 
   .stat {
     min-height: 98px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    --admin-section-gap: 16px;
   }
 }
 
