@@ -55,6 +55,7 @@ export type ProductScope =
 
 export type ShopQuery = {
   categories: string[];
+  brands: string[];
   goals: TrainingGoal[];
   available: boolean;
   sort: CatalogSort;
@@ -98,11 +99,13 @@ export function normalizePage(
 export function normalizeShopQuery(
   params: RawSearchParams,
   activeCategorySlugs: string[],
+  activeBrandSlugs: string[] = [],
 ): ShopQuery {
   const requestedCategories = values(
     params.category,
   );
   const requestedGoals = values(params.goal);
+  const requestedBrands = values(params.brand);
   const requestedSort = Array.isArray(params.sort)
     ? params.sort[0]
     : params.sort;
@@ -114,12 +117,12 @@ export function normalizeShopQuery(
     requestedScope === "accessories"
       ? requestedScope
       : null;
-  const categories =
-    productScope === "accessories"
-      ? []
-      : activeCategorySlugs.filter((item) =>
-          requestedCategories.includes(item),
-        );
+  const categories = activeCategorySlugs.filter((item) =>
+    requestedCategories.includes(item),
+  );
+  const brands = activeBrandSlugs.filter((item) =>
+    requestedBrands.includes(item),
+  );
   const goals =
     productScope === "accessories"
       ? []
@@ -129,6 +132,7 @@ export function normalizeShopQuery(
 
   return {
     categories,
+    brands,
     goals,
     available:
       productScope !== "accessories" &&
@@ -164,6 +168,18 @@ export function areCategoryParamsCanonical(
     requested.every(
       (category, index) => category === categories[index],
     )
+  );
+}
+
+export function areBrandParamsCanonical(
+  value: string | string[] | undefined,
+  brands: string[],
+) {
+  const requested = values(value);
+
+  return (
+    requested.length === brands.length &&
+    requested.every((brand, index) => brand === brands[index])
   );
 }
 
@@ -225,6 +241,9 @@ export function buildShopHref(query: ShopQuery) {
 
   query.categories.forEach((category) =>
     params.append("category", category),
+  );
+  query.brands.forEach((brand) =>
+    params.append("brand", brand),
   );
   query.goals.forEach((goal) =>
     params.append("goal", goal),

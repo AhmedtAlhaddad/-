@@ -16,3 +16,8 @@ export interface ShopCategoryOption {
   slug: string;
   label: string;
 }
+
+export interface NavigationCategory extends ShopCategoryOption {
+  supplement: boolean;
+  accessory: boolean;
+}

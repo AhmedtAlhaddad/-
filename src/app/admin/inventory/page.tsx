@@ -578,7 +578,7 @@ export default async function Page({
           </h1>
 
           <p>
-            متابعة أرصدة الـVariants،
+            متابعة أرصدة الخيارات / النسخ،
             تنبيهات النقص وسجل
             حركات المخزون من مكان واحد.
           </p>
@@ -611,7 +611,7 @@ export default async function Page({
           }
         >
           <span>
-            Variants النشطة
+            الخيارات / النسخ النشطة
           </span>
 
           <strong>
@@ -721,7 +721,7 @@ export default async function Page({
             className={
               styles.searchInput
             }
-            placeholder="ابحث باسم المنتج، SKU، النكهة، الوزن أو المقاس..."
+            placeholder="ابحث باسم المنتج، رمز المخزون (SKU)، النكهة، الوزن أو المقاس..."
           />
 
           <button
@@ -785,7 +785,7 @@ export default async function Page({
                 lowStockCount
               }
               {" "}
-              Variant بمخزون منخفض و
+              خيار / نسخة (Variant) بمخزون منخفض و
               {" "}
               {
                 outOfStockCount
@@ -844,7 +844,7 @@ export default async function Page({
             </span>
 
             <strong>
-              لا توجد Variants
+              لا توجد خيارات / نسخ
               مطابقة
             </strong>
 
@@ -871,11 +871,11 @@ export default async function Page({
                   </th>
 
                   <th>
-                    Variant
+                    الخيار / النسخة (Variant)
                   </th>
 
                   <th>
-                    SKU
+                    رمز المخزون (SKU)
                   </th>
 
                   <th>
@@ -1040,7 +1040,7 @@ export default async function Page({
             styles.footer
           }
         >
-          يتم عرض حتى 1000 Variant
+          يتم عرض حتى 1000 خيار / نسخة (Variant)
           في هذه النسخة من لوحة المخزون.
         </div>
       </section>
@@ -1108,7 +1108,7 @@ export default async function Page({
                     </th>
 
                     <th>
-                      SKU
+                      رمز المخزون (SKU)
                     </th>
 
                     <th>

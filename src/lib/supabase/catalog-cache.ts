@@ -8,6 +8,7 @@ import {
   getCategories as fetchCategories,
   getFeaturedProducts as fetchFeaturedProducts,
   getHomepageCategories as fetchHomepageCategories,
+  getNavigationCategories as fetchNavigationCategories,
   getProductBySlug as fetchProductBySlug,
   searchProducts as fetchSearchProducts,
 } from "@/lib/supabase/catalog";
@@ -21,6 +22,7 @@ import {
   PUBLIC_CATALOG_CACHE_TAG,
   PUBLIC_CATALOG_REVALIDATE_SECONDS,
 } from "@/lib/supabase/catalog-cache-key";
+import { fetchPopularSearchTerms } from "@/lib/supabase/search-analytics";
 
 const cachedFeaturedProducts =
   unstable_cache(
@@ -48,6 +50,7 @@ const cachedFeaturedProducts =
 const cachedCatalogPage = unstable_cache(
   async (
     categorySlugs: string[],
+    brandSlugs: string[],
     trainingGoals: string[],
     available: boolean,
     sort: CatalogSort,
@@ -57,6 +60,7 @@ const cachedCatalogPage = unstable_cache(
   ) =>
     fetchCatalogPage({
       categorySlugs,
+      brandSlugs,
       trainingGoals,
       available,
       sort,
@@ -64,7 +68,7 @@ const cachedCatalogPage = unstable_cache(
       page,
       pageSize,
     }),
-  ["public-catalog-list-v4"],
+  ["public-catalog-list-v5"],
   {
     revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS,
     tags: [PUBLIC_CATALOG_CACHE_TAG],
@@ -150,6 +154,21 @@ const cachedHomepageCategories =
     },
   );
 
+const cachedNavigationCategories = unstable_cache(
+  async () => fetchNavigationCategories(),
+  ["public-catalog-navigation-categories-v1"],
+  {
+    revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS,
+    tags: [PUBLIC_CATALOG_CACHE_TAG],
+  },
+);
+
+const cachedPopularSearchTerms = unstable_cache(
+  async (limit: number) => fetchPopularSearchTerms(limit),
+  ["public-popular-search-terms-v1"],
+  { revalidate: PUBLIC_CATALOG_REVALIDATE_SECONDS },
+);
+
 export async function getFeaturedProducts(
   limit = 4,
   excludeProductSlug?: string,
@@ -162,6 +181,7 @@ export async function getFeaturedProducts(
 
 export async function getCatalogPage(
   categorySlugs: string[],
+  brandSlugs: string[],
   trainingGoals: string[],
   available: boolean,
   sort: CatalogSort,
@@ -171,6 +191,7 @@ export async function getCatalogPage(
 ) {
   return cachedCatalogPage(
     categorySlugs,
+    brandSlugs,
     trainingGoals,
     available,
     sort,
@@ -206,4 +227,12 @@ export async function getCategories() {
 
 export async function getHomepageCategories() {
   return cachedHomepageCategories();
+}
+
+export async function getNavigationCategories() {
+  return cachedNavigationCategories();
+}
+
+export async function getPopularSearchTerms(limit = 8) {
+  return cachedPopularSearchTerms(limit);
 }

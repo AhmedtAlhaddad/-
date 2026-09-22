@@ -326,7 +326,7 @@ function TaxonomyEditor({
             }
             placeholder={
               kind === "brands"
-                ? "مثال: أوبتيموم نيوترشن"
+                ? "مثال: اسم العلامة بالعربية"
                 : "مثال: بروتين"
             }
           />
@@ -347,7 +347,7 @@ function TaxonomyEditor({
             }
             placeholder={
               kind === "brands"
-                ? "Optimum Nutrition"
+                ? "Brand name"
                 : "Protein"
             }
           />
@@ -355,7 +355,7 @@ function TaxonomyEditor({
 
         <label>
           <span>
-            Slug *
+            الرابط المختصر (Slug) *
           </span>
 
           <input
@@ -371,7 +371,7 @@ function TaxonomyEditor({
             }
             placeholder={
               kind === "brands"
-                ? "optimum-nutrition"
+                ? "brand-name"
                 : "protein"
             }
           />

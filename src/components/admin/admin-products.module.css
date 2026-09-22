@@ -1,6 +1,6 @@
 ﻿.page {
   display: grid;
-  gap: 28px;
+  gap: 36px;
   direction: rtl;
 }
 
@@ -14,6 +14,13 @@
 .headingCopy {
   display: grid;
   gap: 7px;
+}
+
+.createActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .eyebrow {
@@ -64,6 +71,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  margin-bottom: 4px;
 }
 
 .stat {
@@ -99,7 +107,7 @@
   border-radius: 17px;
   background: #101614;
   display: grid;
-  gap: 15px;
+  gap: 18px;
 }
 
 .searchForm {
@@ -475,6 +483,11 @@
   .heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .createActions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .addButton {

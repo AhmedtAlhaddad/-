@@ -582,7 +582,7 @@ export function OrdersManager({
                           <div className={detailStyles.itemIdentity}>
                             <strong>{item.product_name_snapshot}</strong>
                             <span>
-                              {item.variant_description_snapshot} · SKU: {item.sku_snapshot} · سعر الوحدة {formatMoney(item.unit_price, order.currency)}
+                              {item.variant_description_snapshot} · رمز المخزون (SKU): {item.sku_snapshot} · سعر الوحدة {formatMoney(item.unit_price, order.currency)}
                             </span>
                           </div>
                           <span className={detailStyles.itemQuantity}>

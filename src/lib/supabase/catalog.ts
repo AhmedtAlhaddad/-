@@ -4,6 +4,7 @@ import type { Brand } from "@/types/brand";
 import type {
   CatalogCategory,
   HomepageCategory,
+  NavigationCategory,
 } from "@/types/category";
 import type {
   CatalogProduct,
@@ -66,6 +67,11 @@ type CategoryProductRow = {
   }>;
 };
 
+type NavigationProductRow = {
+  category_id: string;
+  product_type: string | null;
+};
+
 type VariantRow = {
   id: string;
   sku: string;
@@ -76,6 +82,7 @@ type VariantRow = {
   size_label_ar: string | null;
   size_label_en: string | null;
   servings: number | null;
+  attributes: Record<string, unknown>;
   price: number;
   compare_at_price: number | null;
   stock_quantity: number;
@@ -140,6 +147,7 @@ type StorefrontProductRow = {
   featured: boolean;
   variant_id: string;
   variant_flavor_ar: string | null;
+  variant_color_ar?: string | null;
   variant_weight_value: number | string | null;
   variant_weight_unit: string | null;
   variant_size_label_ar: string | null;
@@ -171,6 +179,7 @@ export type SearchPage = {
 
 export type CatalogPageQuery = {
   categorySlugs: string[];
+  brandSlugs: string[];
   trainingGoals: string[];
   available: boolean;
   sort: CatalogSort;
@@ -215,6 +224,7 @@ const productSelect = `
     weight_unit,
     size_label_ar,
     servings,
+    attributes,
     price,
     compare_at_price,
     stock_quantity,
@@ -264,6 +274,7 @@ const catalogCardSelect = `
     size_label_ar,
     size_label_en,
     servings,
+    attributes,
     price,
     compare_at_price,
     stock_quantity,
@@ -314,6 +325,9 @@ function mapProductType(
 
     case "fitness-accessory":
       return "إكسسوار رياضي";
+
+    case "apparel":
+      return "ملابس رياضية";
 
     default:
       return type ?? "مكمل غذائي";
@@ -425,6 +439,24 @@ function uniqueImages(
   return [...new Set(images)];
 }
 
+function variantOptionLabel(
+  flavor: string | null,
+  size: string | null,
+  attributes: Record<string, unknown>,
+) {
+  const color =
+    typeof attributes.color_ar === "string"
+      ? attributes.color_ar.trim()
+      : "";
+  const option = [...new Set(
+    [flavor?.trim(), color, size?.trim()].filter(
+      (label): label is string => Boolean(label),
+    ),
+  )].join(" / ");
+
+  return option || "الخيار الافتراضي";
+}
+
 function mapProduct(
   row: SupabaseProductRow,
 ): Product {
@@ -519,10 +551,11 @@ function mapProduct(
           id:
             variant.id,
 
-          flavor:
-            variant.flavor_ar ??
-            variant.size_label_ar ??
-            "الخيار الافتراضي",
+          flavor: variantOptionLabel(
+            variant.flavor_ar,
+            variant.size_label_ar,
+            variant.attributes,
+          ),
 
           weight:
             formatWeight(
@@ -623,7 +656,8 @@ function mapProduct(
       ),
 
     storefrontScope:
-      row.product_type === "fitness-accessory"
+      row.product_type === "fitness-accessory" ||
+      row.product_type === "apparel"
         ? "accessories"
         : "supplements",
 
@@ -694,6 +728,9 @@ function mapStorefrontProduct(
     size_label_ar: row.variant_size_label_ar,
     size_label_en: null,
     servings: row.variant_servings,
+    attributes: row.variant_color_ar
+      ? { color_ar: row.variant_color_ar }
+      : {},
     price: Number(row.variant_price),
     compare_at_price:
       row.variant_compare_at_price === null
@@ -721,16 +758,18 @@ function mapStorefrontProduct(
     inStock: row.in_stock,
     type: mapProductType(row.product_type),
     storefrontScope:
-      row.product_type === "fitness-accessory"
+      row.product_type === "fitness-accessory" ||
+      row.product_type === "apparel"
         ? "accessories"
         : "supplements",
     variants: [
       {
         id: variant.id,
-        flavor:
-          variant.flavor_ar ??
-          variant.size_label_ar ??
-          "الخيار الافتراضي",
+        flavor: variantOptionLabel(
+          variant.flavor_ar,
+          variant.size_label_ar,
+          variant.attributes,
+        ),
         weight: formatWeight(variant),
         servings: variant.servings ?? 0,
         price: Number(variant.price),
@@ -747,6 +786,7 @@ function mapStorefrontProduct(
 
 async function runStorefrontQuery({
   categorySlugs,
+  brandSlugs,
   trainingGoals,
   available,
   sort,
@@ -755,13 +795,16 @@ async function runStorefrontQuery({
   page,
   pageSize,
 }: CatalogPageQuery & { search?: string }) {
-  const functionName = productScope
-    ? "list_storefront_products_by_scope"
-    : "list_storefront_products";
+  const functionName = "list_storefront_products_v2";
   const parameters = {
+    p_product_scope: productScope,
     p_category_slugs:
       categorySlugs.length > 0
         ? categorySlugs
+        : null,
+    p_brand_slugs:
+      brandSlugs.length > 0
+        ? brandSlugs
         : null,
     p_training_goals:
       trainingGoals.length > 0
@@ -772,14 +815,53 @@ async function runStorefrontQuery({
     p_search: search || null,
     p_offset: (page - 1) * pageSize,
     p_limit: pageSize,
-    ...(productScope
-      ? { p_product_scope: productScope }
-      : {}),
   };
   const { data, error } = await supabase.rpc(
     functionName,
     parameters,
   );
+
+  if (
+    error &&
+    (error.code === "PGRST202" || error.code === "42883") &&
+    brandSlugs.length === 0
+  ) {
+    const fallbackFunction = productScope
+      ? "list_storefront_products_by_scope"
+      : "list_storefront_products";
+    const fallbackParameters = {
+      p_category_slugs:
+        categorySlugs.length > 0
+          ? categorySlugs
+          : null,
+      p_training_goals:
+        trainingGoals.length > 0
+          ? trainingGoals
+          : null,
+      p_available: available,
+      p_sort: sort,
+      p_search: search || null,
+      p_offset: (page - 1) * pageSize,
+      p_limit: pageSize,
+      ...(productScope
+        ? { p_product_scope: productScope }
+        : {}),
+    };
+    const fallback = await supabase.rpc(
+      fallbackFunction,
+      fallbackParameters,
+    );
+
+    if (!fallback.error) {
+      return (fallback.data ?? []) as StorefrontProductRow[];
+    }
+
+    console.error(
+      "Failed to fetch storefront catalog fallback:",
+      fallback.error,
+    );
+    throw fallback.error;
+  }
 
   if (error) {
     console.error(
@@ -875,6 +957,7 @@ export async function searchProducts(
 ): Promise<SearchPage> {
   const result = await getStorefrontPage({
     categorySlugs: [],
+    brandSlugs: [],
     trainingGoals: [],
     available: false,
     sort: "featured",
@@ -1037,6 +1120,9 @@ export async function getBrands(): Promise<
         id:
           brand.id,
 
+        slug:
+          brand.slug,
+
         name:
           brand.name_ar.trim() ||
           brand.name_en?.trim() ||
@@ -1117,6 +1203,60 @@ export async function getCategories(): Promise<
   const categoryRows = await getActiveCategoryRows();
 
   return categoryRows.map(mapCatalogCategory);
+}
+
+export async function getNavigationCategories(): Promise<
+  NavigationCategory[]
+> {
+  const [categoryRows, productsResult] = await Promise.all([
+    getActiveCategoryRows(),
+    supabase
+      .from("products")
+      .select("category_id, product_type")
+      .eq("status", "active"),
+  ]);
+
+  if (productsResult.error) {
+    console.error(
+      "Failed to determine navigation category scopes:",
+      productsResult.error,
+    );
+    throw productsResult.error;
+  }
+
+  const scopes = new Map<
+    string,
+    { supplement: boolean; accessory: boolean }
+  >();
+
+  for (const product of (productsResult.data ?? []) as NavigationProductRow[]) {
+    const current = scopes.get(product.category_id) ?? {
+      supplement: false,
+      accessory: false,
+    };
+    const accessory =
+      product.product_type === "fitness-accessory" ||
+      product.product_type === "apparel";
+
+    scopes.set(product.category_id, {
+      supplement: current.supplement || !accessory,
+      accessory: current.accessory || accessory,
+    });
+  }
+
+  return categoryRows.map((category) => {
+    const scope = scopes.get(category.id);
+
+    return {
+      slug: category.slug,
+      label:
+        category.name_ar.trim() ||
+        category.name_en?.trim() ||
+        category.slug,
+      supplement: scope?.supplement ?? false,
+      accessory: scope?.accessory ?? false,
+    };
+  });
 }
 
 export async function getHomepageCategories(): Promise<

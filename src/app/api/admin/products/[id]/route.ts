@@ -712,6 +712,32 @@ export async function PATCH(
     });
   }
 
+  const nonSupplement =
+    productType === "apparel" ||
+    productType === "fitness-accessory";
+
+  if (
+    nonSupplement &&
+    (nutritionFacts || usageInstructions || trainingGoals.length > 0)
+  ) {
+    return errorResponse(
+      "الملابس والإكسسوارات لا تقبل حقائق غذائية أو تعليمات استخدام أو أهداف تدريب.",
+    );
+  }
+
+  if (
+    productType === "apparel" &&
+    normalized.some(
+      (variant) =>
+        (!variant.size_label_ar && !variant.size_label_en) ||
+        (!variant.attributes.color_ar && !variant.attributes.color_en),
+    )
+  ) {
+    return errorResponse(
+      "كل خيار ملابس يحتاج إلى لون ومقاس لتكوين نسخة مخزون واضحة.",
+    );
+  }
+
   /*
    * Check slug before writing.
    */

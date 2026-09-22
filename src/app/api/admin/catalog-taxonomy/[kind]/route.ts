@@ -238,7 +238,7 @@ async function readPayload(
       payload: null,
       response:
         errorResponse(
-          "Slug يجب أن يكون أحرف إنجليزية صغيرة وأرقام وشرطات فقط، مثل optimum-nutrition.",
+          "الرابط المختصر (Slug) يجب أن يكون أحرفًا إنجليزية صغيرة وأرقامًا وشرطات فقط، مثل brand-name.",
         ),
     };
   }

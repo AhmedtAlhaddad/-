@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { SearchPage } from "@/components/search/search-page";
+import { StoreChrome } from "@/components/layout/footer";
 
 import {
   getBrands,
   getCategories,
+  getPopularSearchTerms,
   searchProducts,
 } from "@/lib/supabase/catalog-cache";
 
@@ -39,11 +41,12 @@ export default async function Page({ searchParams }: Props) {
   const query = normalizeSearchQuery(params.q);
   const page = normalizePage(params.page);
 
-  const [results, categories, brands] = query
+  const [results, categories, brands, popularSearches] = query
     ? await Promise.all([
         searchProducts(query, page, SEARCH_PAGE_SIZE),
         getCategories(),
         getBrands(),
+        getPopularSearchTerms(),
       ])
     : [
         {
@@ -55,6 +58,7 @@ export default async function Page({ searchParams }: Props) {
         },
         [],
         [],
+        await getPopularSearchTerms(),
       ];
 
   if (query && results.page !== page) {
@@ -72,14 +76,17 @@ export default async function Page({ searchParams }: Props) {
   );
 
   return (
-    <SearchPage
-      query={query}
-      products={results.products}
-      total={results.total}
-      page={results.page}
-      totalPages={results.totalPages}
-      categoryMatches={categoryMatches}
-      brandMatches={brandMatches}
-    />
+    <StoreChrome>
+      <SearchPage
+        query={query}
+        products={results.products}
+        total={results.total}
+        page={results.page}
+        totalPages={results.totalPages}
+        categoryMatches={categoryMatches}
+        brandMatches={brandMatches}
+        popularSearches={popularSearches}
+      />
+    </StoreChrome>
   );
 }

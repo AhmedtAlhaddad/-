@@ -14,6 +14,7 @@ import {
   type ShopQuery,
 } from "@/lib/catalog-query";
 import type { ShopCategoryOption } from "@/types/category";
+import type { ShopBrandOption } from "@/types/brand";
 import type {
   CatalogProduct,
   TrainingGoal,
@@ -22,7 +23,9 @@ import type {
 function Filters({
   query,
   categories,
+  brands,
   onCategory,
+  onBrand,
   onGoal,
   onAvailability,
   onClear,
@@ -30,7 +33,9 @@ function Filters({
 }: {
   query: ShopQuery;
   categories: ShopCategoryOption[];
+  brands: ShopBrandOption[];
   onCategory: (value: string) => void;
+  onBrand: (value: string) => void;
   onGoal: (value: TrainingGoal) => void;
   onAvailability: () => void;
   onClear: () => void;
@@ -51,6 +56,20 @@ function Filters({
               type="checkbox"
               checked={query.categories.includes(item.slug)}
               onChange={() => onCategory(item.slug)}
+            />
+            <span>{item.label}</span>
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset>
+        <legend>العلامة التجارية</legend>
+        {brands.map((item) => (
+          <label key={item.slug}>
+            <input
+              type="checkbox"
+              checked={query.brands.includes(item.slug)}
+              onChange={() => onBrand(item.slug)}
             />
             <span>{item.label}</span>
           </label>
@@ -134,12 +153,14 @@ export function ShopPage({
   totalPages,
   query,
   categories,
+  brands,
 }: {
   products: CatalogProduct[];
   total: number;
   totalPages: number;
   query: ShopQuery;
   categories: ShopCategoryOption[];
+  brands: ShopBrandOption[];
 }) {
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
@@ -186,9 +207,17 @@ export function ShopPage({
     navigate({ ...query, goals, page: 1 });
   };
 
+  const toggleBrand = (value: string) => {
+    const brands = query.brands.includes(value)
+      ? query.brands.filter((item) => item !== value)
+      : [...query.brands, value];
+    navigate({ ...query, brands, page: 1 });
+  };
+
   const clear = () => {
     navigate({
       categories: [],
+      brands: [],
       goals: scopedGoal ? query.goals : [],
       available: false,
       sort: query.sort,
@@ -200,7 +229,9 @@ export function ShopPage({
   const filterProps = {
     query,
     categories,
+    brands,
     onCategory: toggleCategory,
+    onBrand: toggleBrand,
     onGoal: toggleGoal,
     onAvailability: () =>
       navigate({

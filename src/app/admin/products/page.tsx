@@ -583,19 +583,22 @@ export default async function Page({
 
           <p>
             المنتجات والأسعار
-            والـVariants والمخزون
+            والخيارات والمخزون
             في مكان واحد.
           </p>
         </div>
 
-        <Link
-          href="/admin/products/new"
-          className={
-            styles.addButton
-          }
-        >
-          + إضافة منتج
-        </Link>
+        <div className={styles.createActions}>
+          <Link href="/admin/products/new?type=supplement" className={styles.addButton}>
+            + إضافة مكمل
+          </Link>
+          <Link href="/admin/products/new?type=apparel" className={styles.addButton}>
+            + إضافة ملابس
+          </Link>
+          <Link href="/admin/products/new?type=accessory" className={styles.addButton}>
+            + إضافة إكسسوار
+          </Link>
+        </div>
       </section>
 
       <section
@@ -692,7 +695,7 @@ export default async function Page({
             defaultValue={
               search
             }
-            placeholder="ابحث باسم المنتج، العلامة، التصنيف أو slug..."
+            placeholder="ابحث باسم المنتج، العلامة، التصنيف أو الرابط المختصر (Slug)..."
           />
 
           <button
@@ -798,7 +801,7 @@ export default async function Page({
                   </th>
 
                   <th>
-                    Variants
+                    الخيارات / النسخ
                   </th>
 
                   <th>
@@ -806,7 +809,7 @@ export default async function Page({
                   </th>
 
                   <th>
-                    Featured
+                    مميز
                   </th>
 
                   <th>
@@ -1116,8 +1119,8 @@ export default async function Page({
         >
           يتم عرض أول 100 منتج
           حسب آخر تحديث. سنضيف
-          Pagination قبل
-          Production.
+          ترقيم الصفحات قبل
+          الإطلاق النهائي.
         </div>
       </section>
     </main>

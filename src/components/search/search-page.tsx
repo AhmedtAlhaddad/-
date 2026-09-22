@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  useEffect,
   useState,
   useTransition,
   type FormEvent,
@@ -11,24 +12,16 @@ import {
 
 import { ArrowIcon, CloseIcon, SearchIcon } from "@/components/ui/icons";
 import { buildSearchHref } from "@/lib/catalog-query";
+import {
+  isTrackableSearchTerm,
+  normalizeAnalyticsTerm,
+} from "@/lib/search-analytics";
 import { formatPrice } from "@/lib/utils";
 import type { Brand } from "@/types/brand";
 import type { Category } from "@/types/category";
 import type { SearchProduct } from "@/types/product";
 
-const recentDefault = [
-  "واي بروتين",
-  "كرياتين",
-  "إكسسوارات اللياقة",
-];
-
-const popular = [
-  "مكملات ما قبل التمرين",
-  "كرياتين مونوهيدرات",
-  "بروتين مصل اللبن",
-  "BCAA أحماض أمينية",
-  "إكسسوارات اللياقة",
-];
+const RECENT_SEARCHES_KEY = "alam-allayaqa-recent-searches-v1";
 
 function pageItems(page: number, totalPages: number) {
   return [...new Set([1, page - 1, page, page + 1, totalPages])]
@@ -89,6 +82,7 @@ export function SearchPage({
   totalPages,
   categoryMatches,
   brandMatches,
+  popularSearches,
 }: {
   query: string;
   products: SearchProduct[];
@@ -97,10 +91,35 @@ export function SearchPage({
   totalPages: number;
   categoryMatches: Category[];
   brandMatches: Brand[];
+  popularSearches: string[];
 }) {
   const router = useRouter();
-  const [recent, setRecent] = useState(recentDefault);
+  const [recent, setRecent] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+      const parsed: unknown = stored ? JSON.parse(stored) : [];
+
+      if (Array.isArray(parsed)) {
+        const recentItems = parsed
+          .filter((item): item is string => typeof item === "string")
+          .slice(0, 5);
+        const frame = window.requestAnimationFrame(() => {
+          setRecent(recentItems);
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+      }
+    } catch {
+      try {
+        window.localStorage.removeItem(RECENT_SEARCHES_KEY);
+      } catch {
+        // Browser storage can be unavailable entirely.
+      }
+    }
+  }, []);
 
   const navigate = (value: string) => {
     const href = buildSearchHref(value);
@@ -111,12 +130,38 @@ export function SearchPage({
     const normalized = value.trim().replace(/\s+/g, " ");
 
     if (normalized) {
-      setRecent((current) =>
-        [
+      setRecent((current) => {
+        const next = [
           normalized,
           ...current.filter((item) => item !== normalized),
-        ].slice(0, 5),
-      );
+        ].slice(0, 5);
+
+        try {
+          window.localStorage.setItem(
+            RECENT_SEARCHES_KEY,
+            JSON.stringify(next),
+          );
+        } catch {
+          // Recent searches remain available in memory when storage is blocked.
+        }
+
+        return next;
+      });
+
+      if (isTrackableSearchTerm(normalized)) {
+        void fetch("/api/search-analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ term: normalizeAnalyticsTerm(normalized) }),
+          keepalive: true,
+        }).then((response) => {
+          if (!response.ok) {
+            console.error("Search analytics request was rejected.");
+          }
+        }).catch(() => {
+          console.error("Search analytics request failed.");
+        });
+      }
     }
 
     navigate(normalized);
@@ -151,7 +196,14 @@ export function SearchPage({
               <div className="search-block-title">
                 <h2>عمليات البحث الأخيرة</h2>
                 {recent.length > 0 && (
-                  <button onClick={() => setRecent([])}>مسح الكل</button>
+                  <button onClick={() => {
+                    setRecent([]);
+                    try {
+                      window.localStorage.removeItem(RECENT_SEARCHES_KEY);
+                    } catch {
+                      // The in-memory list is still cleared when storage is blocked.
+                    }
+                  }}>مسح الكل</button>
                 )}
               </div>
               {recent.length > 0 ? (
@@ -167,27 +219,32 @@ export function SearchPage({
               )}
             </section>
 
-            <section className="search-block">
-              <h2>الكلمات الأكثر بحثًا</h2>
-              <div className="popular-grid">
-                {popular.map((item) => (
-                  <button onClick={() => applySearch(item)} key={item}>
-                    {item}
-                    <span>↗</span>
-                  </button>
-                ))}
-              </div>
-            </section>
+            {popularSearches.length > 0 && (
+              <section className="search-block">
+                <h2>الكلمات الأكثر بحثًا</h2>
+                <div className="popular-grid">
+                  {popularSearches.map((item) => (
+                    <button onClick={() => applySearch(item)} key={item}>
+                      {item}
+                      <span>↗</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            <Link className="search-promo" href="/shop">
+            <Link className="search-promo" href="/shop?type=supplements">
               <Image
-                src="/images/search-promo.jpg"
-                alt="استكشف منتجات عالم اللياقة"
+                src="https://cdn.mos.cms.futurecdn.net/crNhvY7v5xtBGShFW8ZXV8-1024-80.jpg.webp"
+                alt="تسوق المكملات الغذائية"
                 fill
                 loading="lazy"
                 sizes="(max-width: 900px) 100vw, 850px"
               />
-              <span className="sr-only">استكشف منتجات عالم اللياقة</span>
+              <span className="search-promo-overlay">
+                <strong>تسوق الآن</strong>
+                <span>اكتشف المزيد</span>
+              </span>
             </Link>
           </>
         ) : hasResults ? (
@@ -237,7 +294,7 @@ export function SearchPage({
                   </Link>
                 ))}
                 {brandMatches.map((item) => (
-                  <Link href="/shop" key={item.id}>
+                  <Link href={`/shop?brand=${encodeURIComponent(item.slug)}`} key={item.id}>
                     علامة: {item.name}
                   </Link>
                 ))}
@@ -275,7 +332,6 @@ export function SearchPage({
         )}
       </div>
 
-      <footer className="search-footer">عالم اللياقة © 2026</footer>
     </main>
   );
 }

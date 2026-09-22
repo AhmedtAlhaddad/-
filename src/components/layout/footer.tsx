@@ -7,6 +7,7 @@ import {
   WhatsAppIcon,
 } from "@/components/ui/icons";
 import { AnnouncementBar, Header } from "./header";
+import { getNavigationCategories } from "@/lib/supabase/catalog-cache";
 
 export function CommunitySection() {
   return (
@@ -31,6 +32,8 @@ export function Footer() {
   );
 }
 
-export function StoreChrome({ children, community = false }: { children: ReactNode; community?: boolean }) {
-  return <><AnnouncementBar/><Header/>{children}{community && <CommunitySection/>}<Footer/></>;
+export async function StoreChrome({ children, community = false }: { children: ReactNode; community?: boolean }) {
+  const categories = await getNavigationCategories();
+
+  return <><AnnouncementBar/><Header categories={categories}/>{children}{community && <CommunitySection/>}<Footer/></>;
 }

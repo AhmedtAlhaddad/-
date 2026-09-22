@@ -1365,7 +1365,7 @@ export function ProductImageManager({
 
           <p>
             ارفع الصور، اربطها
-            بالـVariants، عدّل
+            بالخيارات / النسخ (Variants)، عدّل
             وصفها ورتبها بالسحب.
             الصور الجديدة تُحوّل
             تلقائيًا إلى WebP.
@@ -1444,7 +1444,7 @@ export function ProductImageManager({
                       variant.id
                     }
                   >
-                    Variant —{" "}
+                    الخيار / النسخة (Variant) —{" "}
                     {variantLabel(
                       variant,
                     )}
@@ -1549,7 +1549,7 @@ export function ProductImageManager({
           products/{productId}/global/
           <br />
 
-          صور الـVariant:
+          صور الخيار / النسخة (Variant):
           {" "}
           products/{productId}/variants/VARIANT_UUID/
         </div>
@@ -1699,7 +1699,7 @@ export function ProductImageManager({
                           {variantMap.get(
                             image.variant_id,
                           ) ??
-                            "Variant"}
+                            "الخيار / النسخة (Variant)"}
                         </span>
                       )}
 

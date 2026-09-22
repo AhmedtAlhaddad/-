@@ -1,6 +1,9 @@
 ﻿import type { Metadata } from "next";
 
-import { ProductForm } from "@/components/admin/product-form";
+import {
+  ProductForm,
+  type ProductKind,
+} from "@/components/admin/product-form";
 import { requireAdmin } from "@/lib/admin/require-admin";
 
 export const metadata: Metadata = {
@@ -13,7 +16,19 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const requestedType = Array.isArray(params.type)
+    ? params.type[0]
+    : params.type;
+  const createKind: ProductKind =
+    requestedType === "apparel" || requestedType === "accessory"
+      ? requestedType
+      : "supplement";
   const { supabase } =
     await requireAdmin();
 
@@ -59,6 +74,7 @@ export default async function Page() {
   return (
     <ProductForm
       mode="create"
+      createKind={createKind}
       brands={brandsResult.data ?? []}
       categories={
         categoriesResult.data ?? []

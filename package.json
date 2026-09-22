@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:batch1": "node --test scripts/refactor-batch-1.test.mjs"
+    "test:batch1": "node --test scripts/refactor-batch-1.test.mjs",
+    "test:ux": "node --test scripts/storefront-admin-ux.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

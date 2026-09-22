@@ -131,7 +131,7 @@ export default async function Page() {
       title:
         "إدارة المنتجات",
       description:
-        "إضافة المنتجات والـVariants والأسعار والصور.",
+        "إضافة المنتجات وخياراتها وأسعارها وصورها.",
     },
     {
       href:
@@ -277,21 +277,10 @@ export default async function Page() {
         ))}
       </section>
 
-      <section className={styles.notice}>
-        <div>
-          <strong>
-            بيئة Staging
-          </strong>
-
-          <span>
-            التغييرات الحالية للتطوير
-            والاختبار قبل Production.
-          </span>
-        </div>
-
+      <section className={styles.storeAction}>
         <Link
           href="/"
-          className={styles.primaryButton}
+          className={styles.storeButton}
         >
           عرض المتجر
         </Link>

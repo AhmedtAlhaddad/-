@@ -1,6 +1,6 @@
 ﻿.page {
   display: grid;
-  gap: 32px;
+  gap: 38px;
 }
 
 .heading {
@@ -87,6 +87,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 4px;
 }
 
 .sectionTitle h2 {
@@ -141,29 +142,32 @@
   line-height: 1.6;
 }
 
-.notice {
-  padding: 20px 22px;
-  border-radius: 18px;
-  border: 1px solid rgba(25, 201, 139, 0.14);
-  background: rgba(25, 201, 139, 0.055);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.notice div {
+.storeAction {
+  padding-block: 8px 4px;
   display: grid;
-  gap: 5px;
+  place-items: center;
 }
 
-.notice strong {
-  font-size: 14px;
+.storeButton {
+  min-width: min(100%, 280px);
+  min-height: 54px;
+  padding: 0 28px;
+  border: 1px solid rgba(85, 229, 174, 0.28);
+  border-radius: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #20cf91, #12ad77);
+  box-shadow: 0 14px 32px rgba(25, 201, 139, 0.13);
+  color: #06130f;
+  font-weight: 900;
+  text-decoration: none;
+  transition: transform 160ms ease, filter 160ms ease;
 }
 
-.notice span {
-  color: #84918c;
-  font-size: 13px;
+.storeButton:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
 }
 
 @media (max-width: 1100px) {
@@ -192,8 +196,7 @@
     grid-template-columns: 1fr;
   }
 
-  .notice {
-    align-items: flex-start;
-    flex-direction: column;
+  .storeButton {
+    width: 100%;
   }
 }

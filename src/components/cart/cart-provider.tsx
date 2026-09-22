@@ -10,6 +10,7 @@ import {
 
 import type { CartItem } from "@/types/cart";
 import type { CartProduct } from "@/types/product";
+import { playAddToCartSound } from "@/lib/cart-sound";
 
 interface CartContextValue {
   items: CartItem[];
@@ -302,6 +303,8 @@ export function CartProvider({
         },
       ];
     });
+
+    playAddToCartSound();
   };
 
   const updateQuantity = (

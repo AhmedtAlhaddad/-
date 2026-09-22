@@ -55,6 +55,20 @@ type InitialProduct = {
   variants: InitialVariant[];
 };
 
+export type ProductKind = "supplement" | "apparel" | "accessory";
+
+function productKindFromType(productType: string): ProductKind {
+  if (productType === "apparel") {
+    return "apparel";
+  }
+
+  if (productType === "fitness-accessory") {
+    return "accessory";
+  }
+
+  return "supplement";
+}
+
 const TRAINING_GOALS = [
   {
     value: "muscle-building",
@@ -168,6 +182,7 @@ export function ProductForm({
   mode,
   productId,
   initialData,
+  createKind = "supplement",
   brands,
   categories,
   children,
@@ -175,12 +190,17 @@ export function ProductForm({
   mode: "create" | "edit";
   productId?: string;
   initialData?: InitialProduct;
+  createKind?: ProductKind;
   brands: Option[];
   categories: Option[];
   children?: ReactNode;
 }) {
   const router = useRouter();
   const variantCounter = useRef(1000);
+  const productKind = initialData
+    ? productKindFromType(initialData.product_type)
+    : createKind;
+  const isSupplement = productKind === "supplement";
 
   const [slugTouched, setSlugTouched] =
     useState(mode === "edit");
@@ -231,7 +251,11 @@ export function ProductForm({
   const [productType, setProductType] =
     useState(
       initialData?.product_type ??
-        "whey-protein",
+        (productKind === "apparel"
+          ? "apparel"
+          : productKind === "accessory"
+            ? "fitness-accessory"
+            : "supplement"),
     );
 
   const [trainingGoals, setTrainingGoals] =
@@ -265,6 +289,15 @@ export function ProductForm({
         ? initialData.variants.map(initialVariant)
         : [createBlankVariant("variant-1")],
     );
+
+  const [accessoryUsesSize, setAccessoryUsesSize] = useState(
+    productKind === "accessory" &&
+      Boolean(
+        initialData?.variants.some(
+          (variant) => variant.size_label_ar || variant.size_label_en,
+        ),
+      ),
+  );
 
   const [error, setError] =
     useState<string | null>(null);
@@ -354,16 +387,16 @@ export function ProductForm({
               fullDescription,
 
             nutrition_facts:
-              nutritionFacts,
+              isSupplement ? nutritionFacts : "",
 
             usage_instructions:
-              usageInstructions,
+              isSupplement ? usageInstructions : "",
 
             product_type:
               productType,
 
             training_goals:
-              trainingGoals,
+              isSupplement ? trainingGoals : [],
 
             badge_label_ar:
               badge,
@@ -402,10 +435,14 @@ export function ProductForm({
                     variant.weight_unit,
 
                   size_label_ar:
-                    variant.size_label_ar,
+                    productKind === "accessory" && !accessoryUsesSize
+                      ? ""
+                      : variant.size_label_ar,
 
                   size_label_en:
-                    variant.size_label_en,
+                    productKind === "accessory" && !accessoryUsesSize
+                      ? ""
+                      : variant.size_label_en,
 
                   servings:
                     variant.servings,
@@ -477,13 +514,16 @@ export function ProductForm({
 
           <h1>
             {mode === "create"
-              ? "إضافة منتج جديد"
+              ? productKind === "supplement"
+                ? "إضافة مكمل جديد"
+                : productKind === "apparel"
+                  ? "إضافة ملابس جديدة"
+                  : "إضافة إكسسوار جديد"
               : "تعديل المنتج"}
           </h1>
 
           <p>
-            عدّل بيانات المنتج والأسعار
-            والمخزون والحالة والـVariants.
+            عدّل بيانات المنتج والأسعار والمخزون والحالة وخيارات المنتج.
           </p>
         </div>
 
@@ -550,7 +590,7 @@ export function ProductForm({
               className={`${styles.field} ${styles.fieldFull}`}
             >
               <span className={styles.label}>
-                Slug *
+                الرابط المختصر (Slug) *
               </span>
 
               <input
@@ -666,7 +706,7 @@ export function ProductForm({
             />
           </label>
 
-          <div className={styles.grid2}>
+          {isSupplement && <div className={styles.grid2}>
             <label className={styles.field}>
               <span className={styles.label}>
                 الحقائق الغذائية
@@ -704,7 +744,7 @@ export function ProductForm({
                 اكتب تعليمات الملصق فقط، واترك الحقل فارغًا إذا لم تتوفر.
               </span>
             </label>
-          </div>
+          </div>}
         </section>
 
         <section className={styles.card}>
@@ -718,20 +758,29 @@ export function ProductForm({
           <div className={styles.grid2}>
             <label className={styles.field}>
               <span className={styles.label}>
-                Product Type *
+                نوع المنتج *
               </span>
 
-              <input
-                className={styles.input}
-                value={productType}
-                onChange={(event) =>
-                  setProductType(
-                    event.target.value,
-                  )
-                }
-                dir="ltr"
-                required
-              />
+              {isSupplement ? (
+                <select
+                  className={styles.select}
+                  value={productType}
+                  onChange={(event) => setProductType(event.target.value)}
+                  required
+                >
+                  <option value="supplement">مكمل غذائي عام</option>
+                  <option value="whey-protein">واي بروتين</option>
+                  <option value="creatine">كرياتين</option>
+                  <option value="pre-workout">ما قبل التمرين</option>
+                  <option value="bcaa">أحماض أمينية BCAA</option>
+                </select>
+              ) : (
+                <input
+                  className={styles.input}
+                  value={productKind === "apparel" ? "ملابس رياضية" : "إكسسوار رياضي"}
+                  readOnly
+                />
+              )}
             </label>
 
             <label className={styles.field}>
@@ -763,7 +812,7 @@ export function ProductForm({
             </label>
           </div>
 
-          <fieldset className={styles.goalFieldset}>
+          {isSupplement && <fieldset className={styles.goalFieldset}>
             <legend className={styles.label}>
               أهداف التدريب
             </legend>
@@ -801,12 +850,12 @@ export function ProductForm({
             <span className={styles.hint}>
               يمكن ربط المنتج بأكثر من هدف، أو تركها كلها غير محددة.
             </span>
-          </fieldset>
+          </fieldset>}
 
           <div className={styles.grid2}>
             <label className={styles.field}>
               <span className={styles.label}>
-                Badge
+                شارة المنتج (Badge)
               </span>
 
               <input
@@ -831,13 +880,13 @@ export function ProductForm({
                 }
               />
 
-              منتج مميز Featured
+              منتج مميز (Featured)
             </label>
           </div>
 
           <label className={styles.field}>
             <span className={styles.label}>
-              Highlights
+              أبرز المميزات (Highlights)
             </span>
 
             <textarea
@@ -859,11 +908,11 @@ export function ProductForm({
         <section className={styles.card}>
           <div className={styles.cardHeader}>
             <div className={styles.cardTitle}>
-              <h2>Variants</h2>
+              <h2>الخيارات / النسخ (Variants)</h2>
 
               <p>
-                السعر والمخزون وSKU لكل خيار.
-                الـVariant القديم لا نحذفه؛ يمكن
+                السعر والمخزون ورمز المخزون (SKU) لكل خيار.
+                الخيار القديم (Variant) لا نحذفه؛ يمكن
                 تعطيله للحفاظ على التاريخ.
               </p>
             </div>
@@ -873,9 +922,26 @@ export function ProductForm({
               className={styles.addVariant}
               onClick={addVariant}
             >
-              + إضافة Variant
+              + إضافة خيار / نسخة
             </button>
           </div>
+
+          {productKind === "accessory" && (
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={accessoryUsesSize}
+                onChange={(event) => setAccessoryUsesSize(event.target.checked)}
+              />
+              هذا الإكسسوار يحتاج إلى مقاس
+            </label>
+          )}
+
+          {productKind === "apparel" && (
+            <span className={styles.hint}>
+              أضف خيارًا مستقلًا لكل تركيبة لون ومقاس، مثل: أسود + M، وأسود + L.
+            </span>
+          )}
 
           <div className={styles.variants}>
             {variants.map(
@@ -888,7 +954,7 @@ export function ProductForm({
                     className={styles.variantHeader}
                   >
                     <strong>
-                      Variant {index + 1}
+                      الخيار / النسخة (Variant) {index + 1}
                     </strong>
 
                     {!variant.id &&
@@ -912,7 +978,7 @@ export function ProductForm({
                   <div className={styles.grid3}>
                     <label className={styles.field}>
                       <span className={styles.label}>
-                        SKU *
+                        رمز المخزون (SKU) *
                       </span>
 
                       <input
@@ -979,9 +1045,9 @@ export function ProductForm({
                   </div>
 
                   <div className={styles.grid3}>
-                    <label className={styles.field}>
+                    {productKind !== "apparel" && <label className={styles.field}>
                       <span className={styles.label}>
-                        النكهة بالعربي
+                        {productKind === "accessory" ? "الخيار بالعربي" : "النكهة بالعربي"}
                       </span>
 
                       <input
@@ -995,11 +1061,11 @@ export function ProductForm({
                           )
                         }
                       />
-                    </label>
+                    </label>}
 
-                    <label className={styles.field}>
+                    {productKind !== "apparel" && <label className={styles.field}>
                       <span className={styles.label}>
-                        Flavor
+                        {productKind === "accessory" ? "الخيار بالإنجليزية (Option)" : "النكهة بالإنجليزية (Flavor)"}
                       </span>
 
                       <input
@@ -1013,7 +1079,7 @@ export function ProductForm({
                           )
                         }
                       />
-                    </label>
+                    </label>}
 
                     <label className={styles.field}>
                       <span className={styles.label}>
@@ -1042,6 +1108,7 @@ export function ProductForm({
                   </div>
 
                   <div className={styles.grid4}>
+                    {isSupplement && <>
                     <label className={styles.field}>
                       <span className={styles.label}>
                         الوزن
@@ -1118,6 +1185,7 @@ export function ProductForm({
                         dir="ltr"
                       />
                     </label>
+                    </>}
 
                     <label
                       className={styles.checkboxRow}
@@ -1134,11 +1202,12 @@ export function ProductForm({
                         }
                       />
 
-                      Variant نشط
+                      الخيار / النسخة نشطة
                     </label>
                   </div>
 
                   <div className={styles.grid4}>
+                    {(productKind !== "accessory" || accessoryUsesSize) && <>
                     <label className={styles.field}>
                       <span className={styles.label}>
                         المقاس بالعربي
@@ -1161,7 +1230,7 @@ export function ProductForm({
 
                     <label className={styles.field}>
                       <span className={styles.label}>
-                        Size
+                        المقاس بالإنجليزية (Size)
                       </span>
 
                       <input
@@ -1178,6 +1247,7 @@ export function ProductForm({
                         }
                       />
                     </label>
+                    </>}
 
                     <label className={styles.field}>
                       <span className={styles.label}>
@@ -1199,7 +1269,7 @@ export function ProductForm({
 
                     <label className={styles.field}>
                       <span className={styles.label}>
-                        Color
+                        اللون بالإنجليزية (Color)
                       </span>
 
                       <input
@@ -1220,6 +1290,17 @@ export function ProductForm({
             )}
           </div>
         </section>
+
+        {mode === "create" && (
+          <section className={styles.card}>
+            <div className={styles.cardTitle}>
+              <h2>صور المنتج</h2>
+              <p>
+                بعد حفظ البيانات الأساسية بأمان سيفتح مدير الصور مباشرة لإضافة صور المنتج وربطها بالخيارات عند الحاجة.
+              </p>
+            </div>
+          </section>
+        )}
 
         {children}
 
