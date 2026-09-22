@@ -9,7 +9,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 const GENERIC_LOGIN_ERROR =
-  "اسم المستخدم أو كلمة المرور غير صحيحة.";
+  "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -35,20 +35,15 @@ export async function POST(request: Request) {
   }
 
   const payload = body as Record<string, unknown>;
-  const username = text(payload.username);
+  const email = text(payload.email);
   const password = typeof payload.password === "string"
     ? payload.password
     : "";
   const returnTo = safeAdminReturnTo(text(payload.returnTo));
-  const configuredUsername = process.env.ADMIN_LOGIN_USERNAME?.trim();
-  const configuredEmail = process.env.ADMIN_LOGIN_EMAIL?.trim();
 
   if (
-    !configuredUsername ||
-    !configuredEmail ||
-    !username ||
-    !password ||
-    username !== configuredUsername
+    !email ||
+    !password
   ) {
     return NextResponse.json(
       { error: GENERIC_LOGIN_ERROR },
@@ -58,7 +53,7 @@ export async function POST(request: Request) {
 
   const supabase = await createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: configuredEmail,
+    email,
     password,
   });
 

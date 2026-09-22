@@ -11,7 +11,7 @@ export function AdminLogin({
   returnTo: string;
 }) {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export function AdminLogin({
       const response = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username, password, returnTo }),
+        body: JSON.stringify({ email, password, returnTo }),
       });
       const payload: unknown = await response.json().catch(() => null);
       const message =
@@ -40,7 +40,7 @@ export function AdminLogin({
         "error" in payload &&
         typeof payload.error === "string"
           ? payload.error
-          : "اسم المستخدم أو كلمة المرور غير صحيحة.";
+          : "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
 
       if (!response.ok) {
         setError(message);
@@ -70,12 +70,12 @@ export function AdminLogin({
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.field}>
-            <span>اسم المستخدم</span>
+            <span>البريد الإلكتروني</span>
             <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
               required
               autoFocus
             />

@@ -41,15 +41,18 @@ test("gate verification binds the session to the Supabase user and rejects tampe
   assert.match(auth, /catch \{\s*return false;/s);
 });
 
-test("login resolves username server-side and creates the gate only after active admin checks", () => {
-  assert.match(login, /process\.env\.ADMIN_LOGIN_USERNAME/);
-  assert.match(login, /process\.env\.ADMIN_LOGIN_EMAIL/);
+test("login authenticates email directly and creates the gate only after active admin checks", () => {
+  assert.match(login, /const email = text\(payload\.email\)/);
   assert.match(login, /signInWithPassword\(/);
+  assert.match(login, /email,\s*password/s);
   assert.match(login, /profile\.role !== "admin"/);
   assert.match(login, /profile\.active !== true/);
   assert.match(login, /createAdminGateToken\(userId\)/);
   assert.doesNotMatch(loginPage, /signInWithPassword/);
-  assert.doesNotMatch(loginPage, /ADMIN_LOGIN_EMAIL|ADMIN_LOGIN_USERNAME/);
+  assert.match(loginPage, /type="email"/);
+  assert.match(loginPage, /autoComplete="email"/);
+  assert.doesNotMatch(login, /ADMIN_LOGIN_EMAIL|ADMIN_LOGIN_USERNAME/);
+  assert.doesNotMatch(loginPage, /اسم المستخدم/);
 });
 
 test("all Admin APIs use the centralized gate authorization", () => {
