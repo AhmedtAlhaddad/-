@@ -166,3 +166,16 @@ test("brand filtering is active-data-backed and storefront pagination sizes are 
   assert.match(query, /SHOP_PAGE_SIZE = 24/);
   assert.match(query, /SEARCH_PAGE_SIZE = 20/);
 });
+
+test("homepage large images use high-quality optimized rendering and footer developer phone is current", () => {
+  const home = read("src/components/home/home-sections.tsx");
+  const footer = read("src/components/layout/footer.tsx");
+
+  assert.match(home, /src="\/images\/hero-athlete\.jpg"[\s\S]*quality=\{90\}/);
+  assert.equal((home.match(/quality=\{90\}/g) ?? []).length, 2);
+  assert.match(home, /sizes="100vw"/);
+  assert.match(home, /sizes="\(max-width: 700px\) 100vw, 33vw"/);
+  assert.match(footer, /tel:0918063993/);
+  assert.match(footer, />0918063993</);
+  assert.doesNotMatch(footer, /0919063993/);
+});

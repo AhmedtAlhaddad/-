@@ -24,6 +24,7 @@ export function Hero() {
         alt="رياضي يستعد للتمرين"
         fill
         priority
+        quality={90}
         sizes="100vw"
         className="hero-image"
       />
@@ -169,6 +170,7 @@ export function GoalsSection() {
                 src={goal.image}
                 alt={goal.title}
                 fill
+                quality={90}
                 sizes="(max-width: 700px) 100vw, 33vw"
               />
 
