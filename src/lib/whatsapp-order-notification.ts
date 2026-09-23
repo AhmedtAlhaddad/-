@@ -134,6 +134,7 @@ export async function sendWhatsAppOrderNotification(
   const apiVersion = requiredConfig("WHATSAPP_API_VERSION");
   const languageCode = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE?.trim() || "ar";
   const summary = buildOrderNotificationSummary(order);
+  const timeout = AbortSignal.timeout(8_000);
 
   const response = await fetch(
     `https://graph.facebook.com/${encodeURIComponent(apiVersion)}/${encodeURIComponent(phoneNumberId)}/messages`,
@@ -158,6 +159,7 @@ export async function sendWhatsAppOrderNotification(
           ],
         },
       }),
+      signal: timeout,
     },
   );
 

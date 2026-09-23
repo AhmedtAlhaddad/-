@@ -98,3 +98,41 @@ test("WhatsApp sender uses an approved server-side template and authoritative fi
   assert.doesNotMatch(sender, /NEXT_PUBLIC_|SERVICE_ROLE|service_role/);
   assert.doesNotMatch(checkout, /WHATSAPP_ADMIN_PHONE|WHATSAPP_ACCESS_TOKEN/);
 });
+
+test("checkout schedules automatic dispatch only after the trusted order succeeds", () => {
+  const checkout = read("src/app/api/checkout/route.ts");
+  const dispatcher = read("src/lib/automatic-whatsapp-dispatch.ts");
+  const migration = read("supabase/migrations/018_automatic_whatsapp_dispatch.sql");
+
+  assert.match(checkout, /after\(\(\) =>/);
+  assert.match(checkout, /dispatchAutomaticWhatsAppOrder\(result\.order_id, idempotencyKey\)/);
+  assert.match(checkout, /revalidatePublicCatalog\(\);[\s\S]*after\(/);
+  assert.match(dispatcher, /claim_checkout_whatsapp_notification/);
+  assert.match(dispatcher, /complete_checkout_whatsapp_notification/);
+  assert.match(dispatcher, /sendWhatsAppOrderNotification/);
+  assert.match(migration, /checkout_idempotency_key = p_checkout_idempotency_key/);
+  assert.match(migration, /admin_notification_outbox/);
+  assert.match(migration, /security definer/);
+  assert.match(migration, /grant execute .* to anon, authenticated/);
+  assert.doesNotMatch(dispatcher, /WHATSAPP_ADMIN_PHONE/);
+});
+
+test("WhatsApp dispatch has no customer-facing redirect or client provider call", () => {
+  const files = [
+    "src/app/api/checkout/route.ts",
+    "src/components/checkout/checkout-page.tsx",
+    "src/app/checkout/success/page.tsx",
+  ];
+
+  for (const file of files) {
+    let source = "";
+    try {
+      source = read(file);
+    } catch {
+      continue;
+    }
+
+    assert.doesNotMatch(source, /wa\.me|api\.whatsapp|graph\.facebook\.com/);
+    assert.doesNotMatch(source, /WHATSAPP_ACCESS_TOKEN|WHATSAPP_ADMIN_PHONE/);
+  }
+});
