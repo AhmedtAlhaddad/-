@@ -120,6 +120,25 @@ test("true deletion cleans current catalog rows while preserving every historica
   assert.match(migration, /prevent_order_item_mutation/);
 });
 
+test("inventory snapshots are backfilled once while append-only protections remain enforced", () => {
+  const migration = read("supabase/migrations/015_true_product_deletion.sql");
+
+  assert.match(
+    migration,
+    /disable trigger inventory_movements_immutable[\s\S]*update public\.inventory_movements[\s\S]*enable trigger inventory_movements_immutable/s,
+  );
+  assert.match(
+    migration,
+    /movement\.sku_snapshot is null[\s\S]*length\(btrim\(movement\.sku_snapshot\)\) = 0/s,
+  );
+  assert.match(migration, /pg_trigger_depth\(\) > 1/);
+  assert.match(migration, /before insert on public\.inventory_movements/);
+  assert.match(migration, /before update or delete on public\.inventory_movements/);
+  assert.match(migration, /raise exception '% is an append-only historical table'/);
+  assert.match(migration, /on delete set null/);
+  assert.doesNotMatch(migration, /disable trigger all/i);
+});
+
 test("existing immutable order, commission, payout, and athlete history remains protected", () => {
   const orders = read("supabase/migrations/005_orders.sql");
   const commissions = read("supabase/migrations/006_commissions.sql");
