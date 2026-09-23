@@ -141,6 +141,59 @@
   box-shadow: 0 0 0 3px rgba(0, 163, 90, 0.09);
 }
 
+.discountInput {
+  display: flex;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.discountInput input {
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.discountInput input:focus {
+  outline: none;
+}
+
+.discountInput input:focus-visible {
+  outline: 2px solid var(--green-bright);
+  outline-offset: 2px;
+}
+
+.discountButton {
+  flex: 0 0 auto;
+  min-width: 88px;
+  border: 1px solid #343836;
+  background: #202522;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.discountButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.codeSuccess,
+.codeError {
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.codeSuccess {
+  color: var(--green-bright);
+}
+
+.codeError {
+  color: #ff8f99;
+}
+
 .codeHelp,
 .authorityNotice {
   margin: 0;
@@ -267,6 +320,26 @@
 .previewTotal strong {
   color: var(--green-bright);
   font-size: 22px;
+}
+
+.previewTotal .discountPreviewRow strong {
+  color: var(--green-bright);
+  font-size: 14px;
+}
+
+.previewTotal .discountPreviewTotal {
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.previewTotal .discountPreviewTotal span {
+  color: #fff;
+  font-weight: 900;
+}
+
+.previewTotal .discountPreviewTotal strong {
+  color: var(--green-bright);
+  font-size: 24px;
 }
 
 .previewTotal small {

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/cart-provider";
 import {
@@ -12,6 +12,10 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@/components/ui/icons";
+import {
+  requestDiscountPreview,
+  type DiscountPreview,
+} from "@/lib/discount-preview";
 import { formatPrice } from "@/lib/utils";
 
 export function CartPage() {
@@ -23,16 +27,100 @@ export function CartPage() {
   } = useCart();
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
+  const [messageTone, setMessageTone] = useState<
+    "success" | "error" | ""
+  >("");
+  const [preview, setPreview] =
+    useState<DiscountPreview | null>(null);
+  const [previewLoading, setPreviewLoading] =
+    useState(false);
+  const previewRequestId = useRef(0);
+  const cartFingerprint = items
+    .map((item) => `${item.id}:${item.variantId}:${item.quantity}`)
+    .join("|");
+  const cartFingerprintRef = useRef(cartFingerprint);
+  const [previewItems, setPreviewItems] =
+    useState<typeof items | null>(null);
+  const [messageItems, setMessageItems] =
+    useState<typeof items | null>(null);
+  const activePreview =
+    previewItems === items ? preview : null;
+  const activeMessage =
+    messageItems === items ? message : "";
+  const activeMessageTone = activeMessage ? messageTone : "";
   const checkoutHref = code.trim()
     ? `/checkout?code=${encodeURIComponent(code.trim().toUpperCase())}`
     : "/checkout";
 
-  function applyCode() {
-    setMessage(
-      code.trim()
-        ? "سيتم التحقق من الكود وحساب قيمته الموثوقة عند تأكيد الطلب."
-        : "أدخل كودًا أولًا.",
-    );
+  useEffect(() => {
+    cartFingerprintRef.current = cartFingerprint;
+    previewRequestId.current += 1;
+  }, [cartFingerprint]);
+
+  async function applyCode() {
+    const normalizedCode = code.trim().toUpperCase();
+    const requestFingerprint = cartFingerprint;
+
+    if (!normalizedCode) {
+      setPreview(null);
+      setPreviewItems(null);
+      setMessage("أدخل كودًا أولًا.");
+      setMessageTone("error");
+      setMessageItems(items);
+      return;
+    }
+
+    const requestId = ++previewRequestId.current;
+    setPreviewLoading(true);
+    setPreview(null);
+    setPreviewItems(null);
+    setMessage("");
+    setMessageTone("");
+    setMessageItems(null);
+
+    try {
+      const result = await requestDiscountPreview(
+        items.map((item) => ({
+          variant_id: item.variantId,
+          quantity: item.quantity,
+        })),
+        normalizedCode,
+      );
+
+      if (
+        requestId !== previewRequestId.current ||
+        requestFingerprint !== cartFingerprintRef.current
+      ) {
+        return;
+      }
+
+      setCode(result.code);
+      setPreview(result);
+      setPreviewItems(items);
+      setMessage("تم تطبيق كود الخصم.");
+      setMessageTone("success");
+      setMessageItems(items);
+    } catch (caught) {
+      if (
+        requestId !== previewRequestId.current ||
+        requestFingerprint !== cartFingerprintRef.current
+      ) {
+        return;
+      }
+
+      setPreviewItems(null);
+      setMessage(
+        caught instanceof Error
+          ? caught.message
+          : "تعذر التحقق من كود الخصم.",
+      );
+      setMessageTone("error");
+      setMessageItems(items);
+    } finally {
+      if (requestId === previewRequestId.current) {
+        setPreviewLoading(false);
+      }
+    }
   }
 
   return (
@@ -146,28 +234,47 @@ export function CartPage() {
               value={code}
               onChange={(event) => {
                 setCode(event.target.value.toUpperCase());
+                setPreview(null);
+                setPreviewItems(null);
                 setMessage("");
+                setMessageTone("");
+                setMessageItems(null);
               }}
               maxLength={32}
               dir="ltr"
               placeholder="أدخل الكود"
+              aria-describedby="discount-message"
+              aria-invalid={activeMessageTone === "error"}
             />
-            <button type="button" onClick={applyCode}>
-              متابعة
+            <button
+              type="button"
+              onClick={applyCode}
+              disabled={previewLoading}
+            >
+              {previewLoading ? "جارٍ التحقق..." : "تطبيق"}
             </button>
           </div>
-          {message && (
+          {activeMessage && (
             <p
+              id="discount-message"
               aria-live="polite"
-              className={code.trim() ? "code-success" : "code-error"}
+              className={
+                activeMessageTone === "success"
+                  ? "code-success"
+                  : "code-error"
+              }
             >
-              {message}
+              {activeMessage}
             </p>
           )}
           <dl>
             <div>
-              <dt>المجموع الفرعي المعروض</dt>
-              <dd>{formatPrice(subtotal)}</dd>
+              <dt>السعر قبل الخصم</dt>
+              <dd>
+                {formatPrice(
+                  activePreview?.subtotal_before_discount ?? subtotal,
+                )}
+              </dd>
             </div>
             <div>
               <dt>الشحن</dt>
@@ -175,15 +282,23 @@ export function CartPage() {
             </div>
             <div>
               <dt>الخصم</dt>
-              <dd>يحسبه الخادم</dd>
+              <dd className={activePreview ? "discount-value" : undefined}>
+                {activePreview
+                  ? `- ${formatPrice(activePreview.discount_amount)}`
+                  : "يحسبه الخادم"}
+              </dd>
             </div>
           </dl>
           <div className="order-total">
             <span>
-              <b>الإجمالي المبدئي</b>
-              <small>يعيد الخادم حساب السعر والخصم والإجمالي</small>
+              <b>{activePreview ? "السعر بعد الخصم" : "الإجمالي المبدئي"}</b>
+              <small>يعيد الخادم التحقق من السعر والخصم عند تأكيد الطلب</small>
             </span>
-            <strong>{formatPrice(subtotal)}</strong>
+            <strong>
+              {formatPrice(
+                activePreview?.subtotal_after_discount ?? subtotal,
+              )}
+            </strong>
           </div>
           {items.length ? (
             <Link

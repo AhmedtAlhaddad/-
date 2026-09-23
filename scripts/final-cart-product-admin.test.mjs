@@ -33,6 +33,49 @@ test("header cart is a single nowrap row with compact mobile behavior", () => {
   assert.match(header, /<BagIcon \/>[\s\S]*سلة التسوق[\s\S]*<b>\{itemCount\}<\/b>/s);
 });
 
+test("discount preview is server-authoritative, stable on focus, and invalidated when inputs change", () => {
+  const cart = read("src/components/cart/cart-page.tsx");
+  const checkout = read("src/components/checkout/checkout-page.tsx");
+  const previewRoute = read("src/app/api/checkout/discount-preview/route.ts");
+  const previewMigration = read("supabase/migrations/016_discount_preview.sql");
+  const globalCss = read("src/app/globals.css");
+  const checkoutCss = read("src/components/checkout/checkout.module.css");
+
+  assert.match(previewRoute, /rpc\("preview_discount"/);
+  assert.match(previewMigration, /create function public\.preview_discount/);
+  assert.match(previewMigration, /security definer/);
+  assert.match(previewMigration, /subtotal_before_discount/);
+  assert.match(previewMigration, /discount_amount/);
+  assert.match(previewMigration, /subtotal_after_discount/);
+  assert.match(previewMigration, /grant execute on function public\.preview_discount\(jsonb, text\) to anon, authenticated/);
+  assert.doesNotMatch(previewMigration, /commission_percent|commission_amount|payout/);
+
+  for (const source of [cart, checkout]) {
+    assert.match(source, /requestDiscountPreview/);
+    assert.match(source, /setPreview\(null\)|setDiscountPreview\(null\)/);
+    assert.match(source, /subtotal_before_discount/);
+    assert.match(source, /discount_amount/);
+    assert.match(source, /subtotal_after_discount/);
+    assert.doesNotMatch(source, /commission_percent|commission_amount|payout/);
+  }
+
+  assert.match(cart, /previewItems === items/);
+  assert.match(checkout, /discountPreviewItems === items/);
+  assert.match(cart, /onChange=\{\(event\) => \{[\s\S]*setPreview\(null\)[\s\S]*setMessage\(""\)/s);
+  assert.match(checkout, /onChange=\{\(event\) => \{[\s\S]*setDiscountPreview\(null\)[\s\S]*setDiscountMessage\(""\)/s);
+  assert.match(checkout, /fetch\("\/api\/checkout"/);
+  assert.match(checkout, /name="code"/);
+
+  assert.match(globalCss, /\.discount-input input[\s\S]*border: 1px solid var\(--line\)/s);
+  assert.match(globalCss, /\.discount-input input:focus\s*\{[^}]*border-color:/s);
+  assert.doesNotMatch(globalCss, /\.discount-input input:focus\s*\{[^}]*border:\s*(?!1px)/s);
+  assert.match(globalCss, /\.discount-input input\s*\{[^}]*box-sizing:\s*border-box/s);
+  assert.match(globalCss, /\.discount-input input\s*\{[^}]*min-width:\s*0/s);
+  assert.match(globalCss, /\.discount-input button\s*\{[^}]*flex:\s*0 0 auto/s);
+  assert.match(checkoutCss, /\.discountInput\s*\{[^}]*min-width:\s*0/s);
+  assert.match(checkoutCss, /\.discountInput input\s*\{[^}]*box-sizing:\s*border-box[^}]*min-width:\s*0/s);
+});
+
 test("the shared form infers internal family and exposes no duplicate type selector", () => {
   const form = read("src/components/admin/product-form.tsx");
   const list = read("src/app/admin/products/page.tsx");

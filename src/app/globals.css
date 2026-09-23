@@ -330,12 +330,16 @@ img { max-width: 100%; }
 .order-summary { padding: 30px; background: #171918; border: 1px solid #313432; }
 .order-summary h2 { margin-top: 0; }
 .order-summary > label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
-.discount-input { display: flex; }
-.discount-input input { min-width: 0; flex: 1; padding: 12px; border: 1px solid var(--line); background: #0e100f; color: #fff; }
-.discount-input button { padding: 0 22px; border: 0; background: #2d2f32; color: #fff; font-weight: 800; }
+.discount-input { display: flex; min-width: 0; box-sizing: border-box; }
+.discount-input input { box-sizing: border-box; min-width: 0; flex: 1 1 auto; width: 100%; padding: 12px; border: 1px solid var(--line); background: #0e100f; color: #fff; }
+.discount-input input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,163,90,.12); outline: none; }
+.discount-input input:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 2px; }
+.discount-input button { flex: 0 0 auto; min-width: 88px; padding: 0 22px; border: 0; background: #2d2f32; color: #fff; font-weight: 800; }
+.discount-input button:disabled { cursor: wait; opacity: .65; }
 .code-success, .code-error { margin: 7px 0; font-size: 11px; }
 .code-success { color: var(--green-bright); }
 .code-error { color: #ff6572; }
+.discount-value { color: var(--green-bright) !important; }
 .order-summary dl { margin: 25px 0; padding-block: 20px; border-block: 1px solid var(--line); }
 .order-summary dl div { display: flex; justify-content: space-between; margin: 11px 0; color: var(--muted); font-size: 13px; }
 .order-summary dd { margin: 0; color: #fff; font-weight: 700; }
