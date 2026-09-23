@@ -401,12 +401,12 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
                     aria-invalid={activeDiscountMessageTone === "error"}
                     onChange={(event) => {
                       setCode(event.target.value.toUpperCase());
-                          discountRequestId.current += 1;
-                          setDiscountPreview(null);
-                          setDiscountPreviewItems(null);
-                          setDiscountMessage("");
-                          setDiscountMessageTone("");
-                          setDiscountMessageItems(null);
+                      discountRequestId.current += 1;
+                      setDiscountPreview(null);
+                      setDiscountPreviewItems(null);
+                      setDiscountMessage("");
+                      setDiscountMessageTone("");
+                      setDiscountMessageItems(null);
                     }}
                   />
                   <button

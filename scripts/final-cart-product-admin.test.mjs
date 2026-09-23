@@ -66,14 +66,19 @@ test("discount preview is server-authoritative, stable on focus, and invalidated
   assert.match(checkout, /fetch\("\/api\/checkout"/);
   assert.match(checkout, /name="code"/);
 
-  assert.match(globalCss, /\.discount-input input[\s\S]*border: 1px solid var\(--line\)/s);
-  assert.match(globalCss, /\.discount-input input:focus\s*\{[^}]*border-color:/s);
-  assert.doesNotMatch(globalCss, /\.discount-input input:focus\s*\{[^}]*border:\s*(?!1px)/s);
+  assert.match(globalCss, /\.discount-input\s*\{[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:/s);
+  assert.match(globalCss, /\.discount-input:focus-within\s*\{[^}]*border-color:\s*var\(--green\)/s);
+  assert.match(globalCss, /\.discount-input input\s*\{[^}]*border:\s*0[^}]*background:\s*transparent/s);
+  assert.match(globalCss, /\.discount-input input:focus[\s\S]*border:\s*0[\s\S]*box-shadow:\s*none/s);
   assert.match(globalCss, /\.discount-input input\s*\{[^}]*box-sizing:\s*border-box/s);
   assert.match(globalCss, /\.discount-input input\s*\{[^}]*min-width:\s*0/s);
-  assert.match(globalCss, /\.discount-input button\s*\{[^}]*flex:\s*0 0 auto/s);
+  assert.match(globalCss, /\.discount-input button\s*\{[^}]*flex:\s*0 0 auto[^}]*border-inline-start:\s*1px solid var\(--line\)/s);
+  assert.match(globalCss, /\.discount-input button\s*\{[^}]*min-height:\s*48px/s);
   assert.match(checkoutCss, /\.discountInput\s*\{[^}]*min-width:\s*0/s);
-  assert.match(checkoutCss, /\.discountInput input\s*\{[^}]*box-sizing:\s*border-box[^}]*min-width:\s*0/s);
+  assert.match(checkoutCss, /\.discountInput\s*\{[^}]*border:\s*1px solid #[0-9a-f]+[^}]*border-radius:/s);
+  assert.match(checkoutCss, /\.discountInput:focus-within\s*\{[^}]*border-color:\s*var\(--green\)/s);
+  assert.match(checkoutCss, /\.discountInput input\s*\{[^}]*box-sizing:\s*border-box[^}]*min-width:\s*0[^}]*border:\s*0[^}]*background:\s*transparent/s);
+  assert.match(checkoutCss, /\.discountButton\s*\{[^}]*border-inline-start:\s*1px solid #[0-9a-f]+/s);
 });
 
 test("the shared form infers internal family and exposes no duplicate type selector", () => {

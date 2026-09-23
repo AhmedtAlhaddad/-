@@ -145,28 +145,41 @@
   display: flex;
   min-width: 0;
   box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #343836;
+  border-radius: 10px;
+  background: #0b0d0c;
+}
+
+.discountInput:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(0, 163, 90, 0.09);
 }
 
 .discountInput input {
   box-sizing: border-box;
   min-width: 0;
+  min-height: 48px;
   flex: 1 1 auto;
   width: 100%;
+  border: 0;
+  background: transparent;
 }
 
-.discountInput input:focus {
+.discountInput input:focus,
+.discountInput input:focus-visible {
+  border: 0;
+  box-shadow: none;
   outline: none;
 }
 
-.discountInput input:focus-visible {
-  outline: 2px solid var(--green-bright);
-  outline-offset: 2px;
-}
-
 .discountButton {
-  flex: 0 0 auto;
   min-width: 88px;
-  border: 1px solid #343836;
+  min-height: 48px;
+  flex: 0 0 auto;
+  border: 0;
+  border-inline-start: 1px solid #343836;
+  border-radius: 0;
   background: #202522;
   color: #fff;
   font: inherit;
