@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   type FormEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -72,6 +73,9 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
   const activeDiscountMessageTone = activeDiscountMessage
     ? discountMessageTone
     : "";
+  const hasCarriedCode = Boolean(initialCode);
+  const carriedValidationPending =
+    hasCarriedCode && !activeDiscountPreview && !activeDiscountMessageTone;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmedOrder, setConfirmedOrder] =
@@ -79,13 +83,11 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
   const submissionLock = useRef(false);
   const idempotencyKey = useRef<string | null>(null);
 
-  useEffect(() => {
-    cartFingerprintRef.current = cartFingerprint;
-    discountRequestId.current += 1;
-  }, [cartFingerprint]);
-
-  async function applyDiscount() {
-    const normalizedCode = code.trim().toUpperCase();
+  const applyDiscount = useCallback(async (
+    candidate: string,
+    carried = false,
+  ) => {
+    const normalizedCode = candidate.trim().toUpperCase();
     const requestFingerprint = cartFingerprint;
 
     if (!normalizedCode) {
@@ -137,7 +139,9 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
 
       setDiscountPreviewItems(null);
       setDiscountMessage(
-        caught instanceof Error
+        carried
+          ? "تعذر تطبيق كود الخصم على الطلب الحالي."
+          : caught instanceof Error
           ? caught.message
           : "تعذر التحقق من كود الخصم.",
       );
@@ -148,7 +152,19 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
         setDiscountPreviewLoading(false);
       }
     }
-  }
+  }, [cartFingerprint, items]);
+
+  useEffect(() => {
+    cartFingerprintRef.current = cartFingerprint;
+    discountRequestId.current += 1;
+    if (hasCarriedCode && items.length > 0) {
+      const validationTask = window.setTimeout(() => {
+        void applyDiscount(initialCode, true);
+      }, 0);
+
+      return () => window.clearTimeout(validationTask);
+    }
+  }, [applyDiscount, cartFingerprint, hasCarriedCode, initialCode, items.length]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -179,7 +195,9 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
           customer_city: String(data.get("customer_city") ?? ""),
           customer_address: String(data.get("customer_address") ?? ""),
           customer_notes: String(data.get("customer_notes") ?? ""),
-          code: String(data.get("code") ?? ""),
+          code: hasCarriedCode
+            ? activeDiscountPreview?.code ?? ""
+            : String(data.get("code") ?? ""),
           checkout_idempotency_key: idempotencyKey.current,
           items: items.map((item) => ({
             variant_id: item.variantId,
@@ -306,7 +324,14 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
             <h1>تأكيد الطلب</h1>
             <p>أدخل بيانات التوصيل، ثم دع الخادم يتحقق من الطلب بالكامل.</p>
           </div>
-          <Link href="/cart" className={styles.backLink}>
+          <Link
+            href={
+              hasCarriedCode
+                ? `/cart?code=${encodeURIComponent(initialCode)}`
+                : "/cart"
+            }
+            className={styles.backLink}
+          >
             العودة إلى السلة
           </Link>
         </header>
@@ -380,70 +405,87 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
               </div>
             </section>
 
-            <section className={styles.formSection}>
-              <div className={styles.sectionHeading}>
-                <strong>كود الخصم أو الرياضي</strong>
-                <span>اختياري، وسيتم التحقق منه عند إرسال الطلب.</span>
-              </div>
-              <label className={styles.fullField}>
-                <span>الكود</span>
-                <div className={styles.discountInput}>
-                  <input
-                    type="text"
-                    name="code"
-                    value={code}
-                    dir="ltr"
-                    minLength={3}
-                    maxLength={32}
-                    pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,31}"
-                    placeholder="FITNESS20"
-                    aria-describedby="checkout-discount-message"
-                    aria-invalid={activeDiscountMessageTone === "error"}
-                    onChange={(event) => {
-                      setCode(event.target.value.toUpperCase());
-                      discountRequestId.current += 1;
-                      setDiscountPreview(null);
-                      setDiscountPreviewItems(null);
-                      setDiscountMessage("");
-                      setDiscountMessageTone("");
-                      setDiscountMessageItems(null);
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={styles.discountButton}
-                    onClick={applyDiscount}
-                    disabled={discountPreviewLoading}
-                  >
-                    {discountPreviewLoading
-                      ? "جارٍ التحقق..."
-                      : "تطبيق"}
-                  </button>
-                </div>
-                {activeDiscountMessage && (
-                  <small
-                    id="checkout-discount-message"
-                    className={
-                      activeDiscountMessageTone === "success"
-                        ? styles.codeSuccess
-                        : styles.codeError
-                    }
-                    role={
-                      activeDiscountMessageTone === "error"
-                        ? "alert"
-                        : undefined
-                    }
-                    aria-live="polite"
-                  >
+            {hasCarriedCode ? (
+              <div className={styles.carriedCode} role="status" aria-live="polite">
+                <span>
+                  {activeDiscountPreview
+                    ? "تم تطبيق الكود من السلة:"
+                    : "الكود من السلة:"}
+                </span>
+                <strong dir="ltr">{initialCode}</strong>
+                {discountPreviewLoading && <small>جارٍ إعادة التحقق...</small>}
+                {activeDiscountMessageTone === "error" && (
+                  <small className={styles.codeError} role="alert">
                     {activeDiscountMessage}
                   </small>
                 )}
-                <small className={styles.codeHelp}>
-                  الأكواد غير النشطة أو المنتهية أو غير المنطبقة سترفضها
-                  قاعدة البيانات دون تفريغ السلة.
-                </small>
-              </label>
-            </section>
+              </div>
+            ) : (
+              <section className={styles.formSection}>
+                <div className={styles.sectionHeading}>
+                  <strong>كود الخصم أو الرياضي</strong>
+                  <span>اختياري، وسيتم التحقق منه عند إرسال الطلب.</span>
+                </div>
+                <label className={styles.fullField}>
+                  <span>الكود</span>
+                  <div className={styles.discountInput}>
+                    <input
+                      type="text"
+                      name="code"
+                      value={code}
+                      dir="ltr"
+                      minLength={3}
+                      maxLength={32}
+                      pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,31}"
+                      placeholder="FITNESS20"
+                      aria-describedby="checkout-discount-message"
+                      aria-invalid={activeDiscountMessageTone === "error"}
+                      onChange={(event) => {
+                        setCode(event.target.value.toUpperCase());
+                        discountRequestId.current += 1;
+                        setDiscountPreview(null);
+                        setDiscountPreviewItems(null);
+                        setDiscountMessage("");
+                        setDiscountMessageTone("");
+                        setDiscountMessageItems(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.discountButton}
+                      onClick={() => void applyDiscount(code)}
+                      disabled={discountPreviewLoading}
+                    >
+                      {discountPreviewLoading
+                        ? "جارٍ التحقق..."
+                        : "تطبيق"}
+                    </button>
+                  </div>
+                  {activeDiscountMessage && (
+                    <small
+                      id="checkout-discount-message"
+                      className={
+                        activeDiscountMessageTone === "success"
+                          ? styles.codeSuccess
+                          : styles.codeError
+                      }
+                      role={
+                        activeDiscountMessageTone === "error"
+                          ? "alert"
+                          : undefined
+                      }
+                      aria-live="polite"
+                    >
+                      {activeDiscountMessage}
+                    </small>
+                  )}
+                  <small className={styles.codeHelp}>
+                    الأكواد غير النشطة أو المنتهية أو غير المنطبقة سترفضها
+                    قاعدة البيانات دون تفريغ السلة.
+                  </small>
+                </label>
+              </section>
+            )}
 
             <p className={styles.authorityNotice}>
               لا ترسل هذه الصفحة أسعارًا أو إجماليات. الخادم يعيد تحميل
@@ -460,7 +502,11 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
             <button
               type="submit"
               className={styles.submitButton}
-              disabled={submitting}
+              disabled={
+                submitting ||
+                discountPreviewLoading ||
+                carriedValidationPending
+              }
             >
               {submitting ? "جارٍ التحقق وتأكيد الطلب..." : "تأكيد الطلب"}
             </button>
@@ -505,41 +551,28 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
               })}
             </div>
             <div className={styles.previewTotal}>
-              <div>
-                <span>السعر قبل الخصم</span>
-                <strong>
-                  {formatMoney(
-                    activeDiscountPreview?.subtotal_before_discount ?? subtotal,
-                    activeDiscountPreview?.currency,
-                  )}
-                </strong>
-              </div>
-              {activeDiscountPreview && (
-                <>
-                  <div className={styles.discountPreviewRow}>
-                    <span>قيمة الخصم</span>
-                    <strong>
-                      - {formatMoney(
-                        activeDiscountPreview.discount_amount,
-                        activeDiscountPreview.currency,
-                      )}
-                    </strong>
-                  </div>
-                  <div className={styles.discountPreviewTotal}>
-                    <span>السعر بعد الخصم</span>
-                    <strong>
-                      {formatMoney(
-                        activeDiscountPreview.subtotal_after_discount,
-                        activeDiscountPreview.currency,
-                      )}
-                    </strong>
-                  </div>
-                </>
+              {activeDiscountPreview ? (
+                <div className={styles.discountPreviewTotal}>
+                  <span>الإجمالي بعد الخصم</span>
+                  <strong>
+                    {formatMoney(
+                      activeDiscountPreview.subtotal_after_discount,
+                      activeDiscountPreview.currency,
+                    )}
+                  </strong>
+                </div>
+              ) : (
+                <div>
+                  <span>الإجمالي</span>
+                  <strong>{formatMoney(subtotal)}</strong>
+                </div>
               )}
               <small>
                 {activeDiscountPreview
                   ? "المعاينة موثوقة للعرض فقط؛ يعيد الخادم الحساب عند إرسال الطلب."
-                  : "سيظهر الخصم بعد التحقق من الكود من الخادم."}
+                  : hasCarriedCode && activeDiscountMessageTone === "error"
+                    ? "تعذر تطبيق الكود؛ يمكنك العودة إلى السلة لتغييره."
+                    : "سيظهر الخصم بعد التحقق من الكود من الخادم."}
               </small>
             </div>
           </aside>

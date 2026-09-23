@@ -215,6 +215,30 @@
   line-height: 1.7;
 }
 
+.carriedCode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 13px 14px;
+  border: 1px solid #294237;
+  border-radius: 10px;
+  background: rgba(0, 163, 90, 0.08);
+  color: #d8e7df;
+  font-size: 12px;
+}
+
+.carriedCode strong {
+  color: var(--green-bright);
+  letter-spacing: 0.08em;
+}
+
+.carriedCode small {
+  flex-basis: 100%;
+  color: #99aaa0;
+  font-size: 10px;
+}
+
 .authorityNotice {
   padding: 12px 14px;
   border-right: 2px solid var(--green);

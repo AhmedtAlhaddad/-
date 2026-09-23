@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/cart-provider";
 import {
@@ -18,14 +18,14 @@ import {
 } from "@/lib/discount-preview";
 import { formatPrice } from "@/lib/utils";
 
-export function CartPage() {
+export function CartPage({ initialCode = "" }: { initialCode?: string }) {
   const {
     items,
     subtotal,
     updateQuantity,
     removeItem,
   } = useCart();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<
     "success" | "error" | ""
@@ -48,17 +48,12 @@ export function CartPage() {
   const activeMessage =
     messageItems === items ? message : "";
   const activeMessageTone = activeMessage ? messageTone : "";
-  const checkoutHref = code.trim()
-    ? `/checkout?code=${encodeURIComponent(code.trim().toUpperCase())}`
+  const checkoutHref = activePreview?.code
+    ? `/checkout?code=${encodeURIComponent(activePreview.code)}`
     : "/checkout";
 
-  useEffect(() => {
-    cartFingerprintRef.current = cartFingerprint;
-    previewRequestId.current += 1;
-  }, [cartFingerprint]);
-
-  async function applyCode() {
-    const normalizedCode = code.trim().toUpperCase();
+  const applyCode = useCallback(async (candidate: string, carried = false) => {
+    const normalizedCode = candidate.trim().toUpperCase();
     const requestFingerprint = cartFingerprint;
 
     if (!normalizedCode) {
@@ -110,7 +105,9 @@ export function CartPage() {
 
       setPreviewItems(null);
       setMessage(
-        caught instanceof Error
+        carried
+          ? "تعذر تطبيق كود الخصم على السلة الحالية."
+          : caught instanceof Error
           ? caught.message
           : "تعذر التحقق من كود الخصم.",
       );
@@ -121,7 +118,19 @@ export function CartPage() {
         setPreviewLoading(false);
       }
     }
-  }
+  }, [cartFingerprint, items]);
+
+  useEffect(() => {
+    cartFingerprintRef.current = cartFingerprint;
+    previewRequestId.current += 1;
+    if (initialCode && items.length > 0) {
+      const validationTask = window.setTimeout(() => {
+        void applyCode(initialCode, true);
+      }, 0);
+
+      return () => window.clearTimeout(validationTask);
+    }
+  }, [applyCode, cartFingerprint, initialCode, items.length]);
 
   return (
     <main className="cart-page">
@@ -248,7 +257,7 @@ export function CartPage() {
             />
             <button
               type="button"
-              onClick={applyCode}
+              onClick={() => void applyCode(code)}
               disabled={previewLoading}
             >
               {previewLoading ? "جارٍ التحقق..." : "تطبيق"}

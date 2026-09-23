@@ -53,11 +53,22 @@ test("discount preview is server-authoritative, stable on focus, and invalidated
   for (const source of [cart, checkout]) {
     assert.match(source, /requestDiscountPreview/);
     assert.match(source, /setPreview\(null\)|setDiscountPreview\(null\)/);
-    assert.match(source, /subtotal_before_discount/);
-    assert.match(source, /discount_amount/);
     assert.match(source, /subtotal_after_discount/);
     assert.doesNotMatch(source, /commission_percent|commission_amount|payout/);
   }
+
+  assert.match(cart, /activePreview\?\.code/);
+  assert.match(cart, /CartPage\(\{ initialCode = "" \}/);
+  assert.match(cart, /applyCode\(initialCode, true\)/);
+  assert.doesNotMatch(cart, /checkout\?code=.*subtotal|checkout\?code=.*discount/);
+  assert.match(checkout, /hasCarriedCode[\s\S]*\/cart\?code=/);
+  assert.match(checkout, /const hasCarriedCode = Boolean\(initialCode\)/);
+  assert.match(checkout, /applyDiscount\(initialCode, true\)/);
+  assert.match(checkout, /hasCarriedCode[\s\S]*activeDiscountPreview\?\.code/);
+  assert.match(checkout, /hasCarriedCode \? \(/);
+  assert.match(checkout, /تم تطبيق الكود من السلة/);
+  assert.match(checkout, /الإجمالي بعد الخصم/);
+  assert.doesNotMatch(checkout, /السعر قبل الخصم|قيمة الخصم/);
 
   assert.match(cart, /previewItems === items/);
   assert.match(checkout, /discountPreviewItems === items/);
