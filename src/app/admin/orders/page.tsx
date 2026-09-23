@@ -4,6 +4,7 @@ import {
   OrdersManager,
   type AthleteContext,
   type CommissionContext,
+  type NotificationContext,
   type OrderItemSnapshot,
   type OrderRecord,
 } from "@/components/admin/orders-manager";
@@ -48,10 +49,12 @@ type CommissionRow = Omit<
   commission_amount: number | string;
 };
 
+type NotificationRow = NotificationContext;
+
 export default async function Page() {
   const { supabase } = await requireAdmin("/admin/orders");
 
-  const [ordersResult, itemsResult, athletesResult, commissionsResult] =
+  const [ordersResult, itemsResult, athletesResult, commissionsResult, notificationsResult] =
     await Promise.all([
       supabase
         .from("orders")
@@ -77,13 +80,22 @@ export default async function Page() {
           "id, order_id, athlete_id, code_snapshot, base_subtotal, commission_percent, commission_amount, status, approved_at, paid_at, voided_at, created_at",
         )
         .order("created_at", { ascending: false }),
+      supabase
+        .from("admin_notification_outbox")
+        .select("order_id, status, attempt_count, sent_at")
+        .eq("channel", "whatsapp")
+        .order("created_at", { ascending: false }),
     ]);
 
+  const notificationTableUnavailable =
+    notificationsResult.error?.code === "42P01" ||
+    notificationsResult.error?.code === "PGRST205";
   const firstError = [
     ordersResult.error,
     itemsResult.error,
     athletesResult.error,
     commissionsResult.error,
+    notificationTableUnavailable ? null : notificationsResult.error,
   ].find(Boolean);
 
   if (firstError) {
@@ -120,6 +132,11 @@ export default async function Page() {
       items={items}
       athletes={(athletesResult.data ?? []) as AthleteContext[]}
       commissions={commissions}
+      notifications={
+        notificationTableUnavailable
+          ? []
+          : ((notificationsResult.data ?? []) as NotificationRow[])
+      }
     />
   );
 }

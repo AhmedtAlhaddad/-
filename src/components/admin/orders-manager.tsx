@@ -75,6 +75,13 @@ export type CommissionContext = {
   created_at: string;
 };
 
+export type NotificationContext = {
+  order_id: string;
+  status: "pending" | "sending" | "sent" | "failed";
+  attempt_count: number;
+  sent_at: string | null;
+};
+
 type Filter = "all" | OrderStatus;
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -158,6 +165,87 @@ function nextStatus(status: OrderStatus): OrderStatus | null {
   }
 
   return null;
+}
+
+const notificationLabels: Record<NotificationContext["status"], string> = {
+  pending: "بانتظار الإرسال",
+  sending: "جارٍ الإرسال",
+  sent: "تم الإرسال",
+  failed: "فشل الإرسال",
+};
+
+function NotificationUpdater({
+  orderId,
+  notification,
+}: {
+  orderId: string;
+  notification: NotificationContext | undefined;
+}) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  if (!notification) {
+    return null;
+  }
+
+  async function retry() {
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/admin/orders/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId }),
+      });
+      const result = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || result.success !== true) {
+        throw new Error(result.error || "تعذر إرسال إشعار WhatsApp.");
+      }
+
+      setMessage("تم تحديث حالة إشعار WhatsApp.");
+      router.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "تعذر إرسال إشعار WhatsApp.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className={detailStyles.statusPanel}>
+      <div className={detailStyles.statusCopy}>
+        <strong>إشعار WhatsApp للإدارة</strong>
+        <span>
+          الإشعار يعتمد على لقطات الطلب المحفوظة، ولا يؤثر فشل WhatsApp على نجاح الطلب.
+        </span>
+      </div>
+      <p className={notification.status === "failed" ? detailStyles.error : detailStyles.terminalNotice}>
+        {notificationLabels[notification.status]}
+        {notification.attempt_count > 0 && ` · المحاولات: ${notification.attempt_count}`}
+      </p>
+      {notification.status === "failed" && (
+        <button
+          type="button"
+          className={detailStyles.statusButton}
+          disabled={saving}
+          onClick={retry}
+        >
+          {saving ? "جارٍ إعادة المحاولة..." : "إعادة إرسال الإشعار"}
+        </button>
+      )}
+      {message && <p className={detailStyles.success}>{message}</p>}
+    </section>
+  );
 }
 
 function StatusUpdater({ order }: { order: OrderRecord }) {
@@ -287,11 +375,13 @@ export function OrdersManager({
   items,
   athletes,
   commissions,
+  notifications,
 }: {
   orders: OrderRecord[];
   items: OrderItemSnapshot[];
   athletes: AthleteContext[];
   commissions: CommissionContext[];
+  notifications: NotificationContext[];
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -314,6 +404,10 @@ export function OrdersManager({
   const commissionByOrder = useMemo(
     () => new Map(commissions.map((item) => [item.order_id, item])),
     [commissions],
+  );
+  const notificationByOrder = useMemo(
+    () => new Map(notifications.map((item) => [item.order_id, item])),
+    [notifications],
   );
 
   const activeCount = orders.filter((order) =>
@@ -623,6 +717,10 @@ export function OrdersManager({
                   </div>
 
                   <StatusUpdater order={order} />
+                  <NotificationUpdater
+                    orderId={order.id}
+                    notification={notificationByOrder.get(order.id)}
+                  />
                 </div>
               </details>
             );

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { revalidatePublicCatalog } from "@/lib/supabase/revalidate-catalog";
 import { createClient } from "@/lib/supabase/server";
+import { findLibyaCity } from "@/lib/libya-cities";
 
 type CheckoutItem = {
   variant_id: string;
@@ -156,7 +157,8 @@ export async function POST(request: Request) {
   const payload = body as Record<string, unknown>;
   const customerFullName = text(payload.customer_full_name);
   const customerPhone = text(payload.customer_phone);
-  const customerCity = text(payload.customer_city);
+  const customerCityInput = text(payload.customer_city);
+  const customerCity = findLibyaCity(customerCityInput);
   const customerAddress = text(payload.customer_address);
   const customerNotes = optionalText(payload.customer_notes);
   const code = text(payload.code).toUpperCase() || null;
@@ -175,8 +177,8 @@ export async function POST(request: Request) {
     return errorResponse("رقم الهاتف مطلوب ويجب أن يتكون من 6 إلى 32 حرفًا.");
   }
 
-  if (customerCity.length < 2 || customerCity.length > 120) {
-    return errorResponse("المدينة مطلوبة ويجب ألا تتجاوز 120 حرفًا.");
+  if (!customerCity) {
+    return errorResponse("اختر مدينة ليبية معتمدة من القائمة.");
   }
 
   if (customerAddress.length < 5 || customerAddress.length > 500) {

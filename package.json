@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:batch1": "node --test scripts/refactor-batch-1.test.mjs",
     "test:admin-auth": "node --test scripts/admin-auth.test.mjs",
+    "test:notifications": "node --test scripts/city-whatsapp.test.mjs",
     "test:ux": "node --test scripts/storefront-admin-ux.test.mjs",
     "test:final": "node --test scripts/final-cart-product-admin.test.mjs"
   },

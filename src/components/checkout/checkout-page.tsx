@@ -12,6 +12,7 @@ import {
 
 import { useCart } from "@/components/cart/cart-provider";
 import { ArrowIcon, BagIcon, CheckIcon } from "@/components/ui/icons";
+import { LIBYA_CITIES } from "@/lib/libya-cities";
 import {
   requestDiscountPreview,
   type DiscountPreview,
@@ -378,8 +379,16 @@ export function CheckoutPage({ initialCode }: { initialCode: string }) {
                     required
                     minLength={2}
                     maxLength={120}
+                    list="libya-city-options"
+                    placeholder="اختر المدينة"
                     autoComplete="address-level2"
+                    dir="rtl"
                   />
+                  <datalist id="libya-city-options">
+                    {LIBYA_CITIES.map((city) => (
+                      <option key={city.name} value={city.name} />
+                    ))}
+                  </datalist>
                 </label>
 
                 <label className={styles.fullField}>
