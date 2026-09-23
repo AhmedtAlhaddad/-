@@ -50,6 +50,11 @@ export function ProductRemovalAction({
         throw new Error(await responseError(deleteResponse));
       }
 
+      document
+        .querySelector<HTMLElement>(
+          `[data-product-row-id="${productId}"]`,
+        )
+        ?.remove();
       router.refresh();
     } catch (caught) {
       setError(

@@ -77,8 +77,9 @@ test("variant controls and validation are family-specific", () => {
   }
 });
 
-test("product removal confirms once and delegates final deletion to the trusted database function", () => {
+test("product removal removes only after success and refreshes the current catalog", () => {
   const action = read("src/components/admin/product-removal-action.tsx");
+  const page = read("src/app/admin/products/page.tsx");
   const route = read("src/app/api/admin/products/[id]/route.ts");
   const migration = read("supabase/migrations/015_true_product_deletion.sql");
 
@@ -86,6 +87,18 @@ test("product removal confirms once and delegates final deletion to the trusted 
   assert.match(action, /window\.confirm\(message\)/);
   assert.match(action, /method:\s*"DELETE"/);
   assert.match(action, /message = .*productName/);
+  assert.match(page, /\.neq\(\s*"status",\s*"archived",?\s*\)/s);
+  assert.match(page, /data-product-row-id=\{\s*product\.id\s*\}/s);
+  assert.match(action, /document\s*\.querySelector[\s\S]*data-product-row-id/);
+  assert.match(action, /\?\.remove\(\)/);
+  const removeIndex = action.indexOf("?.remove()");
+  const failureIndex = action.indexOf(
+    "throw new Error(await responseError(deleteResponse));",
+  );
+  assert.ok(
+    failureIndex < removeIndex && removeIndex < action.indexOf("router.refresh()"),
+    "the successful deletion must remove the visible row before refreshing",
+  );
   assert.match(route, /"remove_admin_product"/);
   assert.match(migration, /select product\.slug[\s\S]*for update;/s);
   assert.match(migration, /from public\.product_variants variant[\s\S]*for update;/s);

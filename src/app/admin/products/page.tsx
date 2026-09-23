@@ -195,6 +195,10 @@ export default async function Page({
       .select(
         "id, slug, name_ar, name_en, brand_id, category_id, status, featured, created_at, updated_at",
       )
+      .neq(
+        "status",
+        "archived",
+      )
       .order(
         "updated_at",
         {
@@ -254,6 +258,10 @@ export default async function Page({
             count: "exact",
             head: true,
           },
+        )
+        .neq(
+          "status",
+          "archived",
         ),
 
       supabase
@@ -877,6 +885,9 @@ export default async function Page({
 
                     return (
                       <tr
+                        data-product-row-id={
+                          product.id
+                        }
                         key={
                           product.id
                         }
