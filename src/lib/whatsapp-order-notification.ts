@@ -1,3 +1,9 @@
+import {
+  createWhatsAppMetaApiError,
+  INVALID_SUCCESS_RESPONSE,
+  parseWhatsAppSuccessMessageId,
+} from "@/lib/whatsapp-failure";
+
 export type OrderNotificationItem = {
   product_name_snapshot: string;
   variant_description_snapshot: string;
@@ -132,7 +138,7 @@ export async function sendWhatsAppOrderNotification(
   const adminPhone = requiredConfig("WHATSAPP_ADMIN_PHONE");
   const templateName = requiredConfig("WHATSAPP_ORDER_TEMPLATE_NAME");
   const apiVersion = requiredConfig("WHATSAPP_API_VERSION");
-  const languageCode = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE?.trim() || "ar";
+  const languageCode = requiredConfig("WHATSAPP_ORDER_TEMPLATE_LANGUAGE");
   const summary = buildOrderNotificationSummary(order);
   const timeout = AbortSignal.timeout(8_000);
 
@@ -163,7 +169,52 @@ export async function sendWhatsAppOrderNotification(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`WhatsApp provider returned HTTP ${response.status}.`);
+  let responseBody: unknown = null;
+
+  try {
+    responseBody = await response.json();
+  } catch {
+    // A malformed provider body is handled below without retaining raw text.
   }
+
+  if (!response.ok) {
+    const providerError = createWhatsAppMetaApiError(
+      response.status,
+      responseBody,
+      [
+        accessToken,
+        adminPhone,
+        summary,
+        order.customer_full_name,
+        order.customer_phone,
+        order.customer_city,
+        order.customer_address,
+        order.customer_notes ?? "",
+      ],
+    );
+
+    if (process.env.NODE_ENV === "development") {
+      const { status, code, error_subcode, type, message, details } =
+        providerError.diagnostic;
+
+      console.error("WhatsApp Meta error:", {
+        status,
+        code,
+        subcode: error_subcode,
+        type,
+        message,
+        details,
+      });
+    }
+
+    throw providerError;
+  }
+
+  const messageId = parseWhatsAppSuccessMessageId(responseBody);
+
+  if (!messageId) {
+    throw new Error(INVALID_SUCCESS_RESPONSE);
+  }
+
+  return { messageId };
 }

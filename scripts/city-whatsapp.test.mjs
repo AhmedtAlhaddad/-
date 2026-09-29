@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sanitizeWhatsAppFailure } from "../src/lib/whatsapp-failure.ts";
+import {
+  createWhatsAppMetaApiError,
+  parseWhatsAppFailure,
+  parseWhatsAppSuccessMessageId,
+  sanitizeWhatsAppFailure,
+} from "../src/lib/whatsapp-failure.ts";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -129,7 +134,7 @@ test("Admin sees only allow-listed persisted WhatsApp failure details", () => {
 
   assert.match(ordersPage, /sent_at, last_error/);
   assert.match(ordersPage, /sanitizeWhatsAppFailure\(notification\.last_error\)/);
-  assert.match(manager, /السبب: \{notification\.last_error\}/);
+  assert.match(manager, /parseWhatsAppFailure\(notification\.last_error\)/);
   assert.equal(
     sanitizeWhatsAppFailure("WhatsApp provider returned HTTP 400."),
     "WhatsApp provider returned HTTP 400.",
@@ -146,6 +151,93 @@ test("Admin sees only allow-listed persisted WhatsApp failure details", () => {
     sanitizeWhatsAppFailure("access_token=super-secret-token"),
     /super-secret-token|Authorization|access_token/,
   );
+});
+
+test("safe documented Meta error fields are persisted and displayed", () => {
+  const manager = read("src/components/admin/orders-manager.tsx");
+  const providerError = createWhatsAppMetaApiError(400, {
+    error: {
+      code: 132001,
+      error_subcode: 2494010,
+      type: "OAuthException",
+      message: "Template name does not exist in the translation",
+      error_data: {
+        details: "The template new_store_order is unavailable for ar",
+        messaging_product: "whatsapp",
+        ignored_raw_field: "raw-response-marker",
+      },
+      fbtrace_id: "provider-trace-must-not-be-stored",
+    },
+  });
+  const stored = sanitizeWhatsAppFailure(providerError);
+  const parsed = parseWhatsAppFailure(stored);
+
+  assert.equal(parsed.kind, "meta");
+  assert.deepEqual(parsed.diagnostic, {
+    status: 400,
+    code: 132001,
+    error_subcode: 2494010,
+    type: "OAuthException",
+    message: "Template name does not exist in the translation",
+    details: "The template new_store_order is unavailable for ar",
+    messaging_product: "whatsapp",
+  });
+  assert.ok(stored.length <= 480);
+  assert.doesNotMatch(stored, /raw-response-marker|provider-trace/);
+  assert.match(manager, /رمز Meta/);
+  assert.match(manager, /الرمز الفرعي/);
+  assert.match(manager, /failure\.diagnostic\.details/);
+  assert.match(manager, /failure\.diagnostic\.messaging_product/);
+});
+
+test("Meta diagnostics redact credentials, headers, and customer PII", () => {
+  const providerError = createWhatsAppMetaApiError(
+    400,
+    {
+      error: {
+        code: 100,
+        message:
+          "Authorization: Bearer token-super-secret for Ahmad +218912345678",
+        error_data: {
+          details:
+            "access_token=token-super-secret; Ahmad; Tripoli private address",
+        },
+      },
+      request_body: "full-raw-response-must-not-survive",
+    },
+    ["token-super-secret", "+218912345678", "Ahmad", "Tripoli private address"],
+  );
+  const stored = sanitizeWhatsAppFailure(providerError);
+
+  assert.doesNotMatch(
+    stored,
+    /token-super-secret|Authorization|Bearer|218912345678|Ahmad|Tripoli private address|full-raw-response/,
+  );
+  assert.match(stored, /\[redacted\]/);
+});
+
+test("only a valid Meta wamid is accepted as successful delivery", () => {
+  const sender = read("src/lib/whatsapp-order-notification.ts");
+  const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
+  const senderCall = adminApi.indexOf("await sendWhatsAppOrderNotification(payload)");
+  const completeSuccess = adminApi.indexOf("p_success: true");
+
+  assert.equal(
+    parseWhatsAppSuccessMessageId({
+      messaging_product: "whatsapp",
+      messages: [{ id: "wamid.HBgMTestMessageId" }],
+    }),
+    "wamid.HBgMTestMessageId",
+  );
+  assert.equal(parseWhatsAppSuccessMessageId({ messages: [] }), null);
+  assert.equal(
+    parseWhatsAppSuccessMessageId({ messages: [{ id: "not-a-wamid" }] }),
+    null,
+  );
+  assert.equal(parseWhatsAppSuccessMessageId("raw provider response"), null);
+  assert.match(sender, /parseWhatsAppSuccessMessageId\(responseBody\)/);
+  assert.match(sender, /if \(!messageId\)[\s\S]*INVALID_SUCCESS_RESPONSE/);
+  assert.ok(senderCall > -1 && senderCall < completeSuccess);
 });
 
 test("WhatsApp sender uses an approved server-side template and authoritative fields", () => {
@@ -176,9 +268,19 @@ test("WhatsApp sender uses an approved server-side template and authoritative fi
   assert.match(sender, /WHATSAPP_PHONE_NUMBER_ID/);
   assert.match(sender, /WHATSAPP_ADMIN_PHONE/);
   assert.match(sender, /WHATSAPP_ORDER_TEMPLATE_NAME/);
+  assert.match(sender, /requiredConfig\("WHATSAPP_ORDER_TEMPLATE_LANGUAGE"\)/);
   assert.match(sender, /WHATSAPP_API_VERSION/);
   assert.match(sender, /type: "template"/);
+  assert.match(
+    sender,
+    /components: \[\s*\{\s*type: "body",\s*parameters: \[\{ type: "text", text: summary \}\],\s*\},\s*\]/,
+  );
   assert.match(sender, /Authorization: `Bearer \$\{accessToken\}`/);
+  assert.match(
+    sender,
+    /process\.env\.NODE_ENV === "development"[\s\S]*subcode: error_subcode/,
+  );
+  assert.doesNotMatch(sender, /console\.error\([^\n]*(responseBody|accessToken|summary)/);
   assert.doesNotMatch(sender, /NEXT_PUBLIC_|SERVICE_ROLE|service_role/);
   assert.doesNotMatch(checkout, /WHATSAPP_ADMIN_PHONE|WHATSAPP_ACCESS_TOKEN/);
 });

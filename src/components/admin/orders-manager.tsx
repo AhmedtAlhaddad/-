@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { parseWhatsAppFailure } from "@/lib/whatsapp-failure";
+
 import detailStyles from "./admin-orders.module.css";
 import styles from "./admin-taxonomy.module.css";
 
@@ -190,6 +192,10 @@ function NotificationUpdater({
     return null;
   }
 
+  const failure = notification.last_error
+    ? parseWhatsAppFailure(notification.last_error)
+    : null;
+
   async function retry() {
     setSaving(true);
     setMessage("");
@@ -203,14 +209,10 @@ function NotificationUpdater({
       const result = (await response.json()) as {
         success?: boolean;
         error?: string;
-        reason?: string;
       };
 
       if (!response.ok || result.success !== true) {
-        const reason = result.reason ? ` السبب: ${result.reason}` : "";
-        throw new Error(
-          `${result.error || "تعذر إرسال إشعار WhatsApp."}${reason}`,
-        );
+        throw new Error(result.error || "تعذر إرسال إشعار WhatsApp.");
       }
 
       setMessage("تم تحديث حالة إشعار WhatsApp.");
@@ -239,8 +241,52 @@ function NotificationUpdater({
         {notificationLabels[notification.status]}
         {notification.attempt_count > 0 && ` · المحاولات: ${notification.attempt_count}`}
       </p>
-      {notification.status === "failed" && notification.last_error && (
-        <p className={detailStyles.error}>السبب: {notification.last_error}</p>
+      {notification.status === "failed" && failure?.kind === "meta" && (
+        <dl className={detailStyles.notificationErrorDetails}>
+          <div>
+            <dt>حالة HTTP</dt>
+            <dd>{failure.diagnostic.status}</dd>
+          </div>
+          {failure.diagnostic.code !== undefined && (
+            <div>
+              <dt>رمز Meta</dt>
+              <dd>{failure.diagnostic.code}</dd>
+            </div>
+          )}
+          {failure.diagnostic.error_subcode !== undefined && (
+            <div>
+              <dt>الرمز الفرعي</dt>
+              <dd>{failure.diagnostic.error_subcode}</dd>
+            </div>
+          )}
+          {failure.diagnostic.type && (
+            <div>
+              <dt>النوع</dt>
+              <dd dir="auto">{failure.diagnostic.type}</dd>
+            </div>
+          )}
+          {failure.diagnostic.message && (
+            <div>
+              <dt>السبب</dt>
+              <dd dir="auto">{failure.diagnostic.message}</dd>
+            </div>
+          )}
+          {failure.diagnostic.details && (
+            <div>
+              <dt>التفاصيل</dt>
+              <dd dir="auto">{failure.diagnostic.details}</dd>
+            </div>
+          )}
+          {failure.diagnostic.messaging_product && (
+            <div>
+              <dt>المنتج</dt>
+              <dd dir="auto">{failure.diagnostic.messaging_product}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+      {notification.status === "failed" && failure?.kind === "text" && (
+        <p className={detailStyles.error}>السبب: {failure.message}</p>
       )}
       {notification.status === "failed" && (
         <button
