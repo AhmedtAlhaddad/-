@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { sanitizeWhatsAppFailure } from "../src/lib/whatsapp-failure.ts";
+
 const read = (path) => readFileSync(path, "utf8");
 
 test("Libya delivery cities are one curated source and exclude neighbourhood entries", () => {
@@ -62,6 +64,88 @@ test("order outbox is queued transactionally with admin-only retry state", () =>
   assert.match(adminApi, /complete_admin_whatsapp_notification/);
   assert.match(adminApi, /sendWhatsAppOrderNotification/);
   assert.match(ordersPage, /admin_notification_outbox/);
+});
+
+test("Admin retry uses the internal UUID and one explicit camelCase request contract", () => {
+  const ordersMigration = read("supabase/migrations/005_orders.sql");
+  const outboxMigration = read("supabase/migrations/017_admin_whatsapp_order_outbox.sql");
+  const manager = read("src/components/admin/orders-manager.tsx");
+  const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
+
+  assert.match(ordersMigration, /id uuid primary key default gen_random_uuid\(\)/);
+  assert.match(ordersMigration, /order_number bigint generated always as identity unique/);
+  assert.match(outboxMigration, /order_id uuid not null references public\.orders\(id\)/);
+  assert.match(manager, /orderId=\{order\.id\}/);
+  assert.match(manager, /body: JSON\.stringify\(\{ orderId \}\)/);
+  assert.doesNotMatch(manager, /body: JSON\.stringify\(\{ orderId: order\.order_number \}\)/);
+  assert.match(adminApi, /const orderId = text\(requestPayload\.orderId\)/);
+  assert.doesNotMatch(adminApi, /\(body as Record<string, unknown>\)\.order_id/);
+  assert.match(adminApi, /Object\.keys\(requestPayload\)\.length !== 1/);
+});
+
+test("Admin retry validates UUIDs and maps missing jobs to not found before delivery", () => {
+  const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
+  const validation = adminApi.indexOf("!isUuid(orderId)");
+  const claim = adminApi.indexOf('"claim_admin_whatsapp_notification"');
+  const sender = adminApi.indexOf("await sendWhatsAppOrderNotification(payload)");
+
+  assert.ok(validation > -1 && validation < claim);
+  assert.ok(claim > -1 && claim < sender);
+  assert.match(adminApi, /claimError\?\.code === "P0002"/);
+  assert.match(adminApi, /message\.includes\("not found"\)/);
+  assert.match(adminApi, /404/);
+  assert.match(adminApi, /\{ p_order_id: orderId \}/);
+});
+
+test("Admin retry claims the existing job, never enqueues one, and cannot resend sent jobs", () => {
+  const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
+  const migration = read("supabase/migrations/017_admin_whatsapp_order_outbox.sql");
+  const sentGuard = adminApi.indexOf('if (claim.status === "sent")');
+  const sender = adminApi.indexOf("await sendWhatsAppOrderNotification(payload)");
+
+  assert.match(adminApi, /authorizeAdminApi\(\)/);
+  assert.match(adminApi, /claim_admin_whatsapp_notification/);
+  assert.match(adminApi, /complete_admin_whatsapp_notification/);
+  assert.doesNotMatch(adminApi, /insert|enqueue_order_whatsapp_notification/);
+  assert.match(migration, /unique \(order_id, channel\)/);
+  assert.match(migration, /on conflict \(order_id, channel\) do nothing/);
+  assert.ok(sentGuard > -1 && sentGuard < sender);
+});
+
+test("provider failures are completed as failed and remain retryable", () => {
+  const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
+  const migration = read("supabase/migrations/017_admin_whatsapp_order_outbox.sql");
+
+  assert.match(adminApi, /catch \(error\)[\s\S]*p_success: false/);
+  assert.match(adminApi, /p_error: failureReason/);
+  assert.match(migration, /set status = 'failed'/);
+  assert.match(migration, /if v_job\.status = 'sent'/);
+  assert.doesNotMatch(migration, /if v_job\.status = 'failed'[\s\S]*raise exception/);
+});
+
+test("Admin sees only allow-listed persisted WhatsApp failure details", () => {
+  const ordersPage = read("src/app/admin/orders/page.tsx");
+  const manager = read("src/components/admin/orders-manager.tsx");
+
+  assert.match(ordersPage, /sent_at, last_error/);
+  assert.match(ordersPage, /sanitizeWhatsAppFailure\(notification\.last_error\)/);
+  assert.match(manager, /السبب: \{notification\.last_error\}/);
+  assert.equal(
+    sanitizeWhatsAppFailure("WhatsApp provider returned HTTP 400."),
+    "WhatsApp provider returned HTTP 400.",
+  );
+  assert.equal(
+    sanitizeWhatsAppFailure(new Error("Authorization: Bearer super-secret-token")),
+    "WhatsApp provider delivery failed.",
+  );
+  assert.equal(
+    sanitizeWhatsAppFailure('{"error":{"message":"customer +218 secret"}}'),
+    "WhatsApp provider delivery failed.",
+  );
+  assert.doesNotMatch(
+    sanitizeWhatsAppFailure("access_token=super-secret-token"),
+    /super-secret-token|Authorization|access_token/,
+  );
 });
 
 test("WhatsApp sender uses an approved server-side template and authoritative fields", () => {

@@ -80,6 +80,7 @@ export type NotificationContext = {
   status: "pending" | "sending" | "sent" | "failed";
   attempt_count: number;
   sent_at: string | null;
+  last_error: string | null;
 };
 
 type Filter = "all" | OrderStatus;
@@ -197,15 +198,19 @@ function NotificationUpdater({
       const response = await fetch("/api/admin/orders/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: orderId }),
+        body: JSON.stringify({ orderId }),
       });
       const result = (await response.json()) as {
         success?: boolean;
         error?: string;
+        reason?: string;
       };
 
       if (!response.ok || result.success !== true) {
-        throw new Error(result.error || "تعذر إرسال إشعار WhatsApp.");
+        const reason = result.reason ? ` السبب: ${result.reason}` : "";
+        throw new Error(
+          `${result.error || "تعذر إرسال إشعار WhatsApp."}${reason}`,
+        );
       }
 
       setMessage("تم تحديث حالة إشعار WhatsApp.");
@@ -216,6 +221,7 @@ function NotificationUpdater({
           ? error.message
           : "تعذر إرسال إشعار WhatsApp.",
       );
+      router.refresh();
     } finally {
       setSaving(false);
     }
@@ -233,6 +239,9 @@ function NotificationUpdater({
         {notificationLabels[notification.status]}
         {notification.attempt_count > 0 && ` · المحاولات: ${notification.attempt_count}`}
       </p>
+      {notification.status === "failed" && notification.last_error && (
+        <p className={detailStyles.error}>السبب: {notification.last_error}</p>
+      )}
       {notification.status === "failed" && (
         <button
           type="button"

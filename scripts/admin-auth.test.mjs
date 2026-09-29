@@ -19,6 +19,7 @@ const apiRoutes = [
   "src/app/api/admin/discounts/route.ts",
   "src/app/api/admin/commissions/payout/route.ts",
   "src/app/api/admin/orders/status/route.ts",
+  "src/app/api/admin/orders/whatsapp/route.ts",
 ].map(read);
 
 test("admin gate is signed, HttpOnly, and exactly twelve hours", () => {

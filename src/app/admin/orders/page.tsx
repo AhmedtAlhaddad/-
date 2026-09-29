@@ -9,6 +9,7 @@ import {
   type OrderRecord,
 } from "@/components/admin/orders-manager";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { sanitizeWhatsAppFailure } from "@/lib/whatsapp-failure";
 
 export const metadata: Metadata = {
   title: "إدارة الطلبات",
@@ -82,7 +83,7 @@ export default async function Page() {
         .order("created_at", { ascending: false }),
       supabase
         .from("admin_notification_outbox")
-        .select("order_id, status, attempt_count, sent_at")
+        .select("order_id, status, attempt_count, sent_at, last_error")
         .eq("channel", "whatsapp")
         .order("created_at", { ascending: false }),
     ]);
@@ -135,7 +136,14 @@ export default async function Page() {
       notifications={
         notificationTableUnavailable
           ? []
-          : ((notificationsResult.data ?? []) as NotificationRow[])
+          : ((notificationsResult.data ?? []) as NotificationRow[]).map(
+              (notification) => ({
+                ...notification,
+                last_error: notification.last_error
+                  ? sanitizeWhatsAppFailure(notification.last_error)
+                  : null,
+              }),
+            )
       }
     />
   );

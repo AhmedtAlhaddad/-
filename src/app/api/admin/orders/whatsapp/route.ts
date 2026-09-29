@@ -5,6 +5,7 @@ import {
   sendWhatsAppOrderNotification,
   type OrderNotificationPayload,
 } from "@/lib/whatsapp-order-notification";
+import { sanitizeWhatsAppFailure } from "@/lib/whatsapp-failure";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -16,8 +17,11 @@ function isUuid(value: string) {
   );
 }
 
-function errorResponse(error: string, status = 400) {
-  return NextResponse.json({ error }, { status });
+function errorResponse(error: string, status = 400, reason?: string) {
+  return NextResponse.json(
+    { error, ...(reason ? { reason } : {}) },
+    { status },
+  );
 }
 
 type ClaimResult = {
@@ -66,9 +70,10 @@ export async function POST(request: Request) {
     return errorResponse("بيانات الإشعار غير صالحة.");
   }
 
-  const orderId = text((body as Record<string, unknown>).order_id);
+  const requestPayload = body as Record<string, unknown>;
+  const orderId = text(requestPayload.orderId);
 
-  if (!isUuid(orderId)) {
+  if (Object.keys(requestPayload).length !== 1 || !isUuid(orderId)) {
     return errorResponse("معرّف الطلب غير صالح.");
   }
 
@@ -81,11 +86,14 @@ export async function POST(request: Request) {
   if (claimError || !claim) {
     const message = claimError?.message.toLowerCase() ?? "";
 
-    if (message.includes("already being sent")) {
+    if (
+      claimError?.code === "55P03" ||
+      message.includes("already being sent")
+    ) {
       return errorResponse("إشعار الطلب قيد الإرسال حاليًا.", 409);
     }
 
-    if (message.includes("not found")) {
+    if (claimError?.code === "P0002" || message.includes("not found")) {
       return errorResponse("لا توجد مهمة إشعار لهذا الطلب.", 404);
     }
 
@@ -209,13 +217,19 @@ export async function POST(request: Request) {
 
   try {
     await sendWhatsAppOrderNotification(payload);
-  } catch {
+  } catch (error) {
+    const failureReason = sanitizeWhatsAppFailure(error);
+
     await gate.supabase.rpc("complete_admin_whatsapp_notification", {
       p_outbox_id: claim.id,
       p_success: false,
-      p_error: "WhatsApp provider delivery failed.",
+      p_error: failureReason,
     });
-    return errorResponse("تعذر إرسال إشعار WhatsApp؛ بقيت المهمة لإعادة المحاولة.", 502);
+    return errorResponse(
+      "تعذر إرسال إشعار WhatsApp؛ بقيت المهمة لإعادة المحاولة.",
+      502,
+      failureReason,
+    );
   }
 
   const { data: completed, error: completeError } = await gate.supabase.rpc(

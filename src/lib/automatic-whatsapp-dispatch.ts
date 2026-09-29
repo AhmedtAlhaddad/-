@@ -4,6 +4,7 @@ import {
   type OrderNotificationItem,
   type OrderNotificationPayload,
 } from "@/lib/whatsapp-order-notification";
+import { sanitizeWhatsAppFailure } from "@/lib/whatsapp-failure";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -185,11 +186,13 @@ export async function dispatchAutomaticWhatsAppOrder(
   }
 
   let success = false;
+  let failureReason: string | null = null;
 
   try {
     await sendWhatsAppOrderNotification(claim.payload);
     success = true;
-  } catch {
+  } catch (error) {
+    failureReason = sanitizeWhatsAppFailure(error);
     // The order is already committed. The durable outbox remains retryable.
   }
 
@@ -198,6 +201,6 @@ export async function dispatchAutomaticWhatsAppOrder(
     p_order_id: orderId,
     p_checkout_idempotency_key: checkoutIdempotencyKey,
     p_success: success,
-    p_error: success ? null : "WhatsApp provider delivery failed.",
+    p_error: failureReason,
   });
 }
