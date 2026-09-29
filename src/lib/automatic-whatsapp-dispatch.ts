@@ -5,16 +5,10 @@ import {
   type OrderNotificationPayload,
 } from "@/lib/whatsapp-order-notification";
 import { sanitizeWhatsAppFailure } from "@/lib/whatsapp-failure";
+import { isUuid } from "@/lib/uuid";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function uuid(value: unknown): value is string {
-  return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    );
 }
 
 function number(value: unknown) {
@@ -148,7 +142,11 @@ function parseClaim(value: unknown): Claim | null {
   const orderId = record.order_id;
   const status = record.status;
 
-  if (!uuid(id) || !uuid(orderId) || (status !== "sending" && status !== "sent")) {
+  if (
+    !isUuid(id) ||
+    !isUuid(orderId) ||
+    (status !== "sending" && status !== "sent")
+  ) {
     return null;
   }
 
@@ -167,7 +165,7 @@ export async function dispatchAutomaticWhatsAppOrder(
   orderId: string,
   checkoutIdempotencyKey: string,
 ) {
-  if (!uuid(orderId) || !uuid(checkoutIdempotencyKey)) {
+  if (!isUuid(orderId) || !isUuid(checkoutIdempotencyKey)) {
     return;
   }
 

@@ -8,8 +8,10 @@ import {
   parseWhatsAppSuccessMessageId,
   sanitizeWhatsAppFailure,
 } from "../src/lib/whatsapp-failure.ts";
+import { isUuid } from "../src/lib/uuid.ts";
 
 const read = (path) => readFileSync(path, "utf8");
+const REPORTED_ORDER_UUID = "b34c67d1-57e5-4ae8-a724-e8db8727c788";
 
 test("Libya delivery cities are one curated source and exclude neighbourhood entries", () => {
   const cities = read("src/lib/libya-cities.ts");
@@ -88,14 +90,41 @@ test("Admin retry uses the internal UUID and one explicit camelCase request cont
   assert.match(adminApi, /Object\.keys\(requestPayload\)\.length !== 1/);
 });
 
+test("reported Supabase UUID v4 passes canonical retry validation", () => {
+  const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
+
+  assert.equal(isUuid(REPORTED_ORDER_UUID), true);
+  assert.equal(isUuid("2"), false);
+  assert.equal(isUuid("b34c67d1-57e5-4ae8-a724-e8db8727c78"), false);
+  assert.equal(isUuid("b34c67d1-57e5-4ae8-z724-e8db8727c788"), false);
+  assert.match(adminApi, /function errorResponse\(error: string, status = 400/);
+  assert.match(
+    adminApi,
+    /if \(Object\.keys\(requestPayload\)\.length !== 1 \|\| !isUuid\(orderId\)\) \{\s*return errorResponse\("معرّف الطلب غير صالح\."\);/,
+  );
+  assert.match(adminApi, /const orderId = text\(requestPayload\.orderId\)/);
+  assert.doesNotMatch(adminApi, /requestPayload\.order_id/);
+  assert.doesNotMatch(
+    adminApi,
+    /\[89ab\]\[0-9a-f\]\{12\}/,
+  );
+});
+
 test("Admin retry validates UUIDs and maps missing jobs to not found before delivery", () => {
   const adminApi = read("src/app/api/admin/orders/whatsapp/route.ts");
   const validation = adminApi.indexOf("!isUuid(orderId)");
+  const orderLookup = adminApi.indexOf('.from("orders")');
+  const missingOrder = adminApi.indexOf("if (!order)");
   const claim = adminApi.indexOf('"claim_admin_whatsapp_notification"');
   const sender = adminApi.indexOf("await sendWhatsAppOrderNotification(payload)");
 
-  assert.ok(validation > -1 && validation < claim);
+  assert.ok(validation > -1 && validation < orderLookup);
+  assert.ok(orderLookup < missingOrder && missingOrder < claim);
   assert.ok(claim > -1 && claim < sender);
+  assert.match(
+    adminApi.slice(missingOrder, claim),
+    /return errorResponse\("الطلب غير موجود\."\s*,\s*404\)/,
+  );
   assert.match(adminApi, /claimError\?\.code === "P0002"/);
   assert.match(adminApi, /message\.includes\("not found"\)/);
   assert.match(adminApi, /404/);

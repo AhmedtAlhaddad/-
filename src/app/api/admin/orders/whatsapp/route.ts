@@ -6,15 +6,10 @@ import {
   type OrderNotificationPayload,
 } from "@/lib/whatsapp-order-notification";
 import { sanitizeWhatsAppFailure } from "@/lib/whatsapp-failure";
+import { isUuid } from "@/lib/uuid";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(
-    value,
-  );
 }
 
 function errorResponse(error: string, status = 400, reason?: string) {
@@ -77,6 +72,24 @@ export async function POST(request: Request) {
     return errorResponse("معرّف الطلب غير صالح.");
   }
 
+  const orderResult = await gate.supabase
+    .from("orders")
+    .select(
+      "id, order_number, created_at, customer_full_name, customer_phone, customer_city, customer_address, customer_notes, currency, subtotal, code_snapshot, customer_discount_percent_snapshot, discount_amount, total, status, athlete_id",
+    )
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (orderResult.error) {
+    return errorResponse("تعذر قراءة بيانات الطلب المحفوظة.", 500);
+  }
+
+  const order = orderResult.data;
+
+  if (!order) {
+    return errorResponse("الطلب غير موجود.", 404);
+  }
+
   const { data: claimData, error: claimError } = await gate.supabase.rpc(
     "claim_admin_whatsapp_notification",
     { p_order_id: orderId },
@@ -102,34 +115,6 @@ export async function POST(request: Request) {
 
   if (claim.status === "sent") {
     return NextResponse.json({ success: true, status: "sent" });
-  }
-
-  const orderResult = await gate.supabase
-    .from("orders")
-    .select(
-      "id, order_number, created_at, customer_full_name, customer_phone, customer_city, customer_address, customer_notes, currency, subtotal, code_snapshot, customer_discount_percent_snapshot, discount_amount, total, status, athlete_id",
-    )
-    .eq("id", orderId)
-    .maybeSingle();
-
-  if (orderResult.error) {
-    await gate.supabase.rpc("complete_admin_whatsapp_notification", {
-      p_outbox_id: claim.id,
-      p_success: false,
-      p_error: "Authoritative order data could not be loaded.",
-    });
-    return errorResponse("تعذر قراءة بيانات الطلب المحفوظة.", 500);
-  }
-
-  const order = orderResult.data;
-
-  if (!order) {
-    await gate.supabase.rpc("complete_admin_whatsapp_notification", {
-      p_outbox_id: claim.id,
-      p_success: false,
-      p_error: "Authoritative order data is incomplete.",
-    });
-    return errorResponse("بيانات الطلب المحفوظة غير مكتملة.", 500);
   }
 
   const [itemsResult, athleteResult, commissionResult] = await Promise.all([
