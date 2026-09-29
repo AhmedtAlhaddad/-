@@ -8,6 +8,10 @@ import {
   parseWhatsAppSuccessMessageId,
   sanitizeWhatsAppFailure,
 } from "../src/lib/whatsapp-failure.ts";
+import {
+  isSafeWhatsAppTemplateParameter,
+  sanitizeWhatsAppTemplateParameter,
+} from "../src/lib/whatsapp-template-parameter.ts";
 import { isUuid } from "../src/lib/uuid.ts";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -269,6 +273,45 @@ test("only a valid Meta wamid is accepted as successful delivery", () => {
   assert.ok(senderCall > -1 && senderCall < completeSuccess);
 });
 
+test("multiline order summary becomes one safe complete template parameter", () => {
+  const sender = read("src/lib/whatsapp-order-notification.ts");
+  const multilineSummary = [
+    "رقم الطلب: 2\r\n",
+    "الاسم: أحمد الحداد\n",
+    "الهاتف: 0912345678\tالمدينة: طرابلس\n",
+    "المنتج 1: واي بروتين\n",
+    "الخيار: شوكولاتة • SKU: WHEY-CHO-1 • الكمية: 1\n",
+    "المنتج 2: كرياتين\n",
+    "الخيار: 300 غرام • SKU: CREA-300 • الكمية: 2\n",
+    "السعر قبل الخصم: 600 د.ل     كود الخصم: FIT10\n",
+    "قيمة الخصم: 30 د.ل\rالإجمالي: 570 د.ل\n",
+    "الرياضي: محمد • نسبة العمولة: 5% • قيمة العمولة: 28.5 د.ل",
+  ].join("");
+  const parameter = sanitizeWhatsAppTemplateParameter(multilineSummary);
+
+  assert.equal(isSafeWhatsAppTemplateParameter(parameter), true);
+  assert.doesNotMatch(parameter, /[\r\n\t]/);
+  assert.doesNotMatch(parameter, / {5,}/);
+  assert.match(parameter, /رقم الطلب: 2/);
+  assert.match(parameter, /أحمد الحداد/);
+  assert.match(parameter, /واي بروتين/);
+  assert.match(parameter, /WHEY-CHO-1/);
+  assert.match(parameter, /كرياتين/);
+  assert.match(parameter, /CREA-300/);
+  assert.match(parameter, /FIT10/);
+  assert.match(parameter, /قيمة الخصم: 30 د\.ل/);
+  assert.match(parameter, /الإجمالي: 570 د\.ل/);
+  assert.match(parameter, /نسبة العمولة: 5%/);
+  assert.match(parameter, /قيمة العمولة: 28\.5 د\.ل/);
+  assert.doesNotMatch(parameter, /Bearer|Authorization|access[_-]?token/i);
+  assert.match(sender, /sanitizeWhatsAppTemplateParameter\(summary\)/);
+  assert.match(sender, /isSafeWhatsAppTemplateParameter\(templateParameter\)/);
+  assert.match(
+    sender,
+    /parameters: \[\{ type: "text", text: templateParameter \}\]/,
+  );
+});
+
 test("WhatsApp sender uses an approved server-side template and authoritative fields", () => {
   const sender = read("src/lib/whatsapp-order-notification.ts");
   const checkout = read("src/app/api/checkout/route.ts");
@@ -302,7 +345,7 @@ test("WhatsApp sender uses an approved server-side template and authoritative fi
   assert.match(sender, /type: "template"/);
   assert.match(
     sender,
-    /components: \[\s*\{\s*type: "body",\s*parameters: \[\{ type: "text", text: summary \}\],\s*\},\s*\]/,
+    /components: \[\s*\{\s*type: "body",\s*parameters: \[\{ type: "text", text: templateParameter \}\],\s*\},\s*\]/,
   );
   assert.match(sender, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.match(

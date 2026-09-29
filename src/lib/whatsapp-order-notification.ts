@@ -3,6 +3,10 @@ import {
   INVALID_SUCCESS_RESPONSE,
   parseWhatsAppSuccessMessageId,
 } from "@/lib/whatsapp-failure";
+import {
+  isSafeWhatsAppTemplateParameter,
+  sanitizeWhatsAppTemplateParameter,
+} from "@/lib/whatsapp-template-parameter";
 
 export type OrderNotificationItem = {
   product_name_snapshot: string;
@@ -140,7 +144,12 @@ export async function sendWhatsAppOrderNotification(
   const apiVersion = requiredConfig("WHATSAPP_API_VERSION");
   const languageCode = requiredConfig("WHATSAPP_ORDER_TEMPLATE_LANGUAGE");
   const summary = buildOrderNotificationSummary(order);
+  const templateParameter = sanitizeWhatsAppTemplateParameter(summary);
   const timeout = AbortSignal.timeout(8_000);
+
+  if (!isSafeWhatsAppTemplateParameter(templateParameter)) {
+    throw new Error("WhatsApp template parameter is invalid.");
+  }
 
   const response = await fetch(
     `https://graph.facebook.com/${encodeURIComponent(apiVersion)}/${encodeURIComponent(phoneNumberId)}/messages`,
@@ -160,7 +169,7 @@ export async function sendWhatsAppOrderNotification(
           components: [
             {
               type: "body",
-              parameters: [{ type: "text", text: summary }],
+              parameters: [{ type: "text", text: templateParameter }],
             },
           ],
         },
@@ -185,6 +194,7 @@ export async function sendWhatsAppOrderNotification(
         accessToken,
         adminPhone,
         summary,
+        templateParameter,
         order.customer_full_name,
         order.customer_phone,
         order.customer_city,
