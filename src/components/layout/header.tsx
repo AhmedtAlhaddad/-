@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 
 import { useCart } from "@/components/cart/cart-provider";
@@ -113,7 +114,15 @@ export function Header({
         </button>
 
         <Link href="/" className="brand" aria-label="عالم اللياقة - الرئيسية">
-          <span className="brand-mark">ع</span>
+          <Image
+            className="brand-mark"
+            src="/images/brand-muscular-icon.png"
+            alt=""
+            width={264}
+            height={191}
+            aria-hidden="true"
+            priority
+          />
           <span>عالم <b>اللياقة</b></span>
         </Link>
 

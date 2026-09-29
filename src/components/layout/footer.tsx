@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import {
   FacebookIcon,
@@ -23,7 +24,7 @@ export function Footer() {
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
-        <div><Link className="brand footer-brand" href="/"><span className="brand-mark">ع</span><span>عالم <b>اللياقة</b></span></Link><p>وجهتك للمكملات الرياضية الأصلية والأداء الأفضل.</p></div>
+        <div><Link className="brand footer-brand" href="/"><Image className="brand-mark" src="/images/brand-muscular-icon.png" alt="" width={264} height={191} aria-hidden="true"/><span>عالم <b>اللياقة</b></span></Link><p>وجهتك للمكملات الرياضية الأصلية والأداء الأفضل.</p></div>
         <div><h3>تواصل معنا</h3><p>طرابلس، حي دمشق بجانب مصحة السندان</p><a href="tel:0911465383" dir="ltr">0911465383</a><div className="socials"><span role="img" aria-label="TikTok" title="TikTok"><TikTokIcon /></span><span role="img" aria-label="Facebook" title="Facebook"><FacebookIcon /></span><span role="img" aria-label="Instagram" title="Instagram"><InstagramIcon /></span><span role="img" aria-label="WhatsApp" title="WhatsApp"><WhatsAppIcon /></span></div></div>
         <div className="developer-credit"><h3>تم تطوير الموقع بواسطة :</h3><strong>احمد الحداد</strong><a href="tel:0918063993" dir="ltr">0918063993</a></div>
       </div>
