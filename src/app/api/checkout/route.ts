@@ -1,6 +1,6 @@
 import { after, NextResponse } from "next/server";
 
-import { dispatchAutomaticWhatsAppOrder } from "@/lib/automatic-whatsapp-dispatch";
+import { dispatchAutomaticTelegramOrder } from "@/lib/automatic-telegram-dispatch";
 import { revalidatePublicCatalog } from "@/lib/supabase/revalidate-catalog";
 import { createClient } from "@/lib/supabase/server";
 import { findLibyaCity } from "@/lib/libya-cities";
@@ -252,7 +252,7 @@ export async function POST(request: Request) {
 
   revalidatePublicCatalog();
   after(() =>
-    dispatchAutomaticWhatsAppOrder(result.order_id, idempotencyKey),
+    dispatchAutomaticTelegramOrder(result.order_id, idempotencyKey),
   );
 
   return NextResponse.json({

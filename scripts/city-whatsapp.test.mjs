@@ -8,6 +8,18 @@ import {
   parseWhatsAppSuccessMessageId,
   sanitizeWhatsAppFailure,
 } from "../src/lib/whatsapp-failure.ts";
+import { buildOrderNotificationSummary } from "../src/lib/order-notification.ts";
+import {
+  createTelegramApiError,
+  parseTelegramFailure,
+  readTelegramConfig,
+  sanitizeTelegramFailure,
+  sendTelegramTextMessages,
+} from "../src/lib/telegram-failure.ts";
+import {
+  splitTelegramOrderMessage,
+  TELEGRAM_ORDER_HEADING,
+} from "../src/lib/telegram-message.ts";
 import {
   isSafeWhatsAppTemplateParameter,
   sanitizeWhatsAppTemplateParameter,
@@ -16,6 +28,42 @@ import { isUuid } from "../src/lib/uuid.ts";
 
 const read = (path) => readFileSync(path, "utf8");
 const REPORTED_ORDER_UUID = "b34c67d1-57e5-4ae8-a724-e8db8727c788";
+const COMPLETE_ORDER = {
+  order_number: 42,
+  created_at: "2026-09-29T12:30:00.000Z",
+  customer_full_name: "أحمد الحداد",
+  customer_phone: "+218912345678",
+  customer_city: "طرابلس",
+  customer_address: "شارع الاستقلال",
+  customer_notes: "الاتصال قبل الوصول",
+  currency: "LYD",
+  subtotal: 600,
+  code_snapshot: "FIT10",
+  customer_discount_percent_snapshot: 5,
+  discount_amount: 30,
+  total: 570,
+  status: "pending",
+  items: [
+    {
+      product_name_snapshot: "واي بروتين",
+      variant_description_snapshot: "شوكولاتة • 2 كجم",
+      sku_snapshot: "WHEY-CHO-2KG",
+      quantity: 1,
+      unit_price: 400,
+      line_total: 400,
+    },
+    {
+      product_name_snapshot: "كرياتين",
+      variant_description_snapshot: "300 غرام",
+      sku_snapshot: "CREA-300",
+      quantity: 2,
+      unit_price: 100,
+      line_total: 200,
+    },
+  ],
+  athlete: { display_name: "محمد الرياضي" },
+  commission: { commission_percent: 5, commission_amount: 28.5 },
+};
 
 test("Libya delivery cities are one curated source and exclude neighbourhood entries", () => {
   const cities = read("src/lib/libya-cities.ts");
@@ -75,6 +123,23 @@ test("order outbox is queued transactionally with admin-only retry state", () =>
   assert.match(adminApi, /complete_admin_whatsapp_notification/);
   assert.match(adminApi, /sendWhatsAppOrderNotification/);
   assert.match(ordersPage, /admin_notification_outbox/);
+});
+
+test("migration 019 preserves WhatsApp history and activates Telegram for new orders", () => {
+  const migration = read("supabase/migrations/019_telegram_order_notifications.sql");
+  const checkout = read("src/app/api/checkout/route.ts");
+
+  assert.match(migration, /check \(channel in \('whatsapp', 'telegram'\)\)/);
+  assert.match(migration, /drop trigger if exists orders_enqueue_whatsapp_notification/);
+  assert.match(migration, /values \(new\.id, 'telegram'\)/);
+  assert.match(migration, /create trigger orders_enqueue_telegram_notification/);
+  assert.match(migration, /claim_checkout_telegram_notification/);
+  assert.match(migration, /complete_checkout_telegram_notification/);
+  assert.match(migration, /claim_admin_telegram_notification/);
+  assert.match(migration, /complete_admin_telegram_notification/);
+  assert.doesNotMatch(migration, /delete from public\.admin_notification_outbox/);
+  assert.match(checkout, /dispatchAutomaticTelegramOrder/);
+  assert.doesNotMatch(checkout, /dispatchAutomaticWhatsAppOrder/);
 });
 
 test("Admin retry uses the internal UUID and one explicit camelCase request contract", () => {
@@ -312,8 +377,214 @@ test("multiline order summary becomes one safe complete template parameter", () 
   );
 });
 
+test("Telegram provider accepts only HTTP success with ok true", async () => {
+  const requests = [];
+  const fetcher = async (url, init) => {
+    requests.push({ url, init });
+    return new Response(
+      JSON.stringify({ ok: true, result: { message_id: 321 } }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  const result = await sendTelegramTextMessages({
+    token: "test-token-not-a-real-secret",
+    chatId: "-100123",
+    messages: ["طلب تجريبي"],
+    fetcher,
+  });
+
+  assert.deepEqual(result.messageIds, [321]);
+  assert.equal(requests.length, 1);
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    chat_id: "-100123",
+    text: "طلب تجريبي",
+  });
+  assert.equal(requests[0].init.signal instanceof AbortSignal, true);
+  assert.doesNotMatch(requests[0].init.body, /test-token-not-a-real-secret/);
+});
+
+test("Telegram HTTP and ok-false failures retain only safe diagnostics", async () => {
+  for (const response of [
+    new Response(
+      JSON.stringify({
+        ok: false,
+        error_code: 400,
+        description: "Bad Request: chat not found",
+        raw_secret: "must-not-survive",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ),
+    new Response(
+      JSON.stringify({
+        ok: false,
+        error_code: 429,
+        description: "Too Many Requests",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  ]) {
+    await assert.rejects(
+      sendTelegramTextMessages({
+        token: "telegram-test-token",
+        chatId: "-100123",
+        messages: ["safe message"],
+        fetcher: async () => response,
+      }),
+      (error) => {
+        const stored = sanitizeTelegramFailure(error);
+        const parsed = parseTelegramFailure(stored);
+
+        assert.equal(parsed.kind, "telegram");
+        assert.equal(parsed.diagnostic.status, response.status);
+        assert.ok([400, 429].includes(parsed.diagnostic.error_code));
+        assert.equal(typeof parsed.diagnostic.description, "string");
+        assert.doesNotMatch(
+          stored,
+          /telegram-test-token|-100123|must-not-survive|Authorization/i,
+        );
+        return true;
+      },
+    );
+  }
+});
+
+test("Telegram timeout and missing server configuration remain safely retryable", async () => {
+  const timeout = new Error("provider URL with secret token");
+  timeout.name = "TimeoutError";
+
+  await assert.rejects(
+    sendTelegramTextMessages({
+      token: "telegram-timeout-token",
+      chatId: "-100123",
+      messages: ["safe message"],
+      fetcher: async () => {
+        throw timeout;
+      },
+    }),
+    (error) => {
+      assert.equal(sanitizeTelegramFailure(error), "Telegram request timed out.");
+      return true;
+    },
+  );
+  assert.throws(
+    () => readTelegramConfig({ TELEGRAM_CHAT_ID: "-100123" }),
+    /TELEGRAM_BOT_TOKEN/,
+  );
+  assert.throws(
+    () => readTelegramConfig({ TELEGRAM_BOT_TOKEN: "configured" }),
+    /TELEGRAM_CHAT_ID/,
+  );
+});
+
+test("Telegram summary preserves complete authoritative Arabic order details", () => {
+  const summary = buildOrderNotificationSummary(
+    COMPLETE_ORDER,
+    TELEGRAM_ORDER_HEADING,
+  );
+
+  for (const expected of [
+    "طلب جديد من عالم اللياقة",
+    "رقم الطلب: #42",
+    "أحمد الحداد",
+    "+218912345678",
+    "طرابلس",
+    "شارع الاستقلال",
+    "الاتصال قبل الوصول",
+    "واي بروتين",
+    "شوكولاتة • 2 كجم",
+    "WHEY-CHO-2KG",
+    "كرياتين",
+    "CREA-300",
+    "FIT10",
+    "خصم العميل: 5%",
+    "قيمة الخصم",
+    "الإجمالي النهائي",
+    "محمد الرياضي",
+    "نسبة العمولة: 5%",
+    "قيمة العمولة",
+  ]) {
+    assert.match(summary, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.deepEqual(splitTelegramOrderMessage(summary), [summary]);
+});
+
+test("long Telegram orders split without truncating ordered item details", () => {
+  const longOrder = {
+    ...COMPLETE_ORDER,
+    items: Array.from({ length: 90 }, (_, index) => ({
+      product_name_snapshot: `منتج طويل ${index + 1}`,
+      variant_description_snapshot: `خيار محفوظ ${index + 1}`,
+      sku_snapshot: `SKU-LONG-${index + 1}`,
+      quantity: index + 1,
+      unit_price: 10,
+      line_total: (index + 1) * 10,
+    })),
+  };
+  const summary = buildOrderNotificationSummary(
+    longOrder,
+    TELEGRAM_ORDER_HEADING,
+  );
+  const chunks = splitTelegramOrderMessage(summary);
+  const combined = chunks.join("\n");
+
+  assert.ok(chunks.length > 1);
+  assert.ok(chunks.every((chunk) => chunk.length <= 3_500));
+  assert.match(chunks[0], /\(1\/\d+\)/);
+  assert.match(chunks.at(-1), /\(\d+\/\d+\)/);
+  assert.match(combined, /SKU-LONG-1/);
+  assert.match(combined, /SKU-LONG-45/);
+  assert.match(combined, /SKU-LONG-90/);
+  assert.match(combined, /الإجمالي النهائي/);
+});
+
+test("Telegram diagnostics never serialize token, headers, raw bodies, or PII", () => {
+  const error = createTelegramApiError(
+    400,
+    {
+      ok: false,
+      error_code: 400,
+      description:
+        "Authorization: Bearer secret-bot-token for أحمد +218912345678",
+      raw_response: "full-provider-body",
+    },
+    ["secret-bot-token", "أحمد", "+218912345678"],
+  );
+  const stored = sanitizeTelegramFailure(error);
+
+  assert.doesNotMatch(
+    stored,
+    /secret-bot-token|Authorization|Bearer|أحمد|218912345678|full-provider-body/,
+  );
+});
+
+test("Telegram destination and Admin retry remain server-controlled", () => {
+  const sender = read("src/lib/telegram-order-notification.ts");
+  const provider = read("src/lib/telegram-failure.ts");
+  const adminApi = read("src/app/api/admin/orders/telegram/route.ts");
+  const adminPage = read("src/app/admin/orders/page.tsx");
+  const manager = read("src/components/admin/orders-manager.tsx");
+
+  assert.match(provider, /process\.env/);
+  assert.match(provider, /TELEGRAM_BOT_TOKEN/);
+  assert.match(provider, /TELEGRAM_CHAT_ID/);
+  assert.match(provider, /AbortSignal\.timeout\(8_000\)/);
+  assert.doesNotMatch(sender + provider, /NEXT_PUBLIC_|service_role|SERVICE_ROLE/);
+  assert.match(adminApi, /authorizeAdminApi/);
+  assert.match(adminApi, /claim_admin_telegram_notification/);
+  assert.match(adminApi, /complete_admin_telegram_notification/);
+  assert.match(adminApi, /sendTelegramOrderNotification\(payload\)/);
+  assert.doesNotMatch(adminApi, /requestPayload\.(chat|chatId|text|token)/);
+  assert.match(adminPage, /order_id, channel, status/);
+  assert.doesNotMatch(adminPage, /\.eq\("channel", "whatsapp"\)/);
+  assert.match(manager, /`\/api\/admin\/orders\/\$\{notification\.channel\}`/);
+  assert.match(manager, /إشعار \{providerName\} للإدارة/);
+});
+
 test("WhatsApp sender uses an approved server-side template and authoritative fields", () => {
   const sender = read("src/lib/whatsapp-order-notification.ts");
+  const formatter = read("src/lib/order-notification.ts");
   const checkout = read("src/app/api/checkout/route.ts");
 
   for (const field of [
@@ -333,7 +604,7 @@ test("WhatsApp sender uses an approved server-side template and authoritative fi
     "commission_percent",
     "commission_amount",
   ]) {
-    assert.match(sender, new RegExp(field));
+    assert.match(formatter, new RegExp(field));
   }
 
   assert.match(sender, /WHATSAPP_ACCESS_TOKEN/);
@@ -357,22 +628,24 @@ test("WhatsApp sender uses an approved server-side template and authoritative fi
   assert.doesNotMatch(checkout, /WHATSAPP_ADMIN_PHONE|WHATSAPP_ACCESS_TOKEN/);
 });
 
-test("checkout schedules automatic dispatch only after the trusted order succeeds", () => {
+test("checkout schedules retryable Telegram dispatch only after the order succeeds", () => {
   const checkout = read("src/app/api/checkout/route.ts");
-  const dispatcher = read("src/lib/automatic-whatsapp-dispatch.ts");
-  const migration = read("supabase/migrations/018_automatic_whatsapp_dispatch.sql");
+  const dispatcher = read("src/lib/automatic-telegram-dispatch.ts");
+  const migration = read("supabase/migrations/019_telegram_order_notifications.sql");
 
   assert.match(checkout, /after\(\(\) =>/);
-  assert.match(checkout, /dispatchAutomaticWhatsAppOrder\(result\.order_id, idempotencyKey\)/);
+  assert.match(checkout, /dispatchAutomaticTelegramOrder\(result\.order_id, idempotencyKey\)/);
   assert.match(checkout, /revalidatePublicCatalog\(\);[\s\S]*after\(/);
-  assert.match(dispatcher, /claim_checkout_whatsapp_notification/);
-  assert.match(dispatcher, /complete_checkout_whatsapp_notification/);
-  assert.match(dispatcher, /sendWhatsAppOrderNotification/);
+  assert.match(dispatcher, /claim_checkout_telegram_notification/);
+  assert.match(dispatcher, /complete_checkout_telegram_notification/);
+  assert.match(dispatcher, /sendTelegramOrderNotification/);
+  assert.match(dispatcher, /catch \(providerError\)/);
+  assert.match(dispatcher, /p_success: success/);
   assert.match(migration, /checkout_idempotency_key = p_checkout_idempotency_key/);
   assert.match(migration, /admin_notification_outbox/);
   assert.match(migration, /security definer/);
   assert.match(migration, /grant execute .* to anon, authenticated/);
-  assert.doesNotMatch(dispatcher, /WHATSAPP_ADMIN_PHONE/);
+  assert.doesNotMatch(dispatcher, /TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID/);
 });
 
 test("WhatsApp dispatch has no customer-facing redirect or client provider call", () => {

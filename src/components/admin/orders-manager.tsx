@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { parseTelegramFailure } from "@/lib/telegram-failure";
 import { parseWhatsAppFailure } from "@/lib/whatsapp-failure";
 
 import detailStyles from "./admin-orders.module.css";
@@ -79,6 +80,7 @@ export type CommissionContext = {
 
 export type NotificationContext = {
   order_id: string;
+  channel: "telegram" | "whatsapp";
   status: "pending" | "sending" | "sent" | "failed";
   attempt_count: number;
   sent_at: string | null;
@@ -182,46 +184,51 @@ function NotificationUpdater({
   notification,
 }: {
   orderId: string;
-  notification: NotificationContext | undefined;
+  notification: NotificationContext;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  if (!notification) {
-    return null;
-  }
-
+  const providerName = notification.channel === "telegram" ? "Telegram" : "WhatsApp";
   const failure = notification.last_error
-    ? parseWhatsAppFailure(notification.last_error)
+    ? notification.channel === "telegram"
+      ? parseTelegramFailure(notification.last_error)
+      : parseWhatsAppFailure(notification.last_error)
     : null;
+  const canRetry =
+    notification.status === "failed" ||
+    (notification.channel === "telegram" && notification.status === "pending");
 
   async function retry() {
     setSaving(true);
     setMessage("");
 
     try {
-      const response = await fetch("/api/admin/orders/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      });
+      const response = await fetch(
+        `/api/admin/orders/${notification.channel}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        },
+      );
       const result = (await response.json()) as {
         success?: boolean;
         error?: string;
       };
 
       if (!response.ok || result.success !== true) {
-        throw new Error(result.error || "تعذر إرسال إشعار WhatsApp.");
+        throw new Error(result.error || `تعذر إرسال إشعار ${providerName}.`);
       }
 
-      setMessage("تم تحديث حالة إشعار WhatsApp.");
+      setMessage(`تم تحديث حالة إشعار ${providerName}.`);
       router.refresh();
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "تعذر إرسال إشعار WhatsApp.",
+          : `تعذر إرسال إشعار ${providerName}.`,
       );
       router.refresh();
     } finally {
@@ -232,9 +239,9 @@ function NotificationUpdater({
   return (
     <section className={detailStyles.statusPanel}>
       <div className={detailStyles.statusCopy}>
-        <strong>إشعار WhatsApp للإدارة</strong>
+        <strong>إشعار {providerName} للإدارة</strong>
         <span>
-          الإشعار يعتمد على لقطات الطلب المحفوظة، ولا يؤثر فشل WhatsApp على نجاح الطلب.
+          الإشعار يعتمد على لقطات الطلب المحفوظة، ولا يؤثر فشل {providerName} على نجاح الطلب.
         </span>
       </div>
       <p className={notification.status === "failed" ? detailStyles.error : detailStyles.terminalNotice}>
@@ -285,10 +292,30 @@ function NotificationUpdater({
           )}
         </dl>
       )}
+      {notification.status === "failed" && failure?.kind === "telegram" && (
+        <dl className={detailStyles.notificationErrorDetails}>
+          <div>
+            <dt>حالة HTTP</dt>
+            <dd>{failure.diagnostic.status}</dd>
+          </div>
+          {failure.diagnostic.error_code !== undefined && (
+            <div>
+              <dt>رمز Telegram</dt>
+              <dd>{failure.diagnostic.error_code}</dd>
+            </div>
+          )}
+          {failure.diagnostic.description && (
+            <div>
+              <dt>السبب</dt>
+              <dd dir="auto">{failure.diagnostic.description}</dd>
+            </div>
+          )}
+        </dl>
+      )}
       {notification.status === "failed" && failure?.kind === "text" && (
         <p className={detailStyles.error}>السبب: {failure.message}</p>
       )}
-      {notification.status === "failed" && (
+      {canRetry && (
         <button
           type="button"
           className={detailStyles.statusButton}
@@ -461,7 +488,17 @@ export function OrdersManager({
     [commissions],
   );
   const notificationByOrder = useMemo(
-    () => new Map(notifications.map((item) => [item.order_id, item])),
+    () => {
+      const map = new Map<string, NotificationContext[]>();
+
+      for (const notification of notifications) {
+        const group = map.get(notification.order_id) ?? [];
+        group.push(notification);
+        map.set(notification.order_id, group);
+      }
+
+      return map;
+    },
     [notifications],
   );
 
@@ -772,10 +809,15 @@ export function OrdersManager({
                   </div>
 
                   <StatusUpdater order={order} />
-                  <NotificationUpdater
-                    orderId={order.id}
-                    notification={notificationByOrder.get(order.id)}
-                  />
+                  {(notificationByOrder.get(order.id) ?? []).map(
+                    (notification) => (
+                      <NotificationUpdater
+                        key={notification.channel}
+                        orderId={order.id}
+                        notification={notification}
+                      />
+                    ),
+                  )}
                 </div>
               </details>
             );

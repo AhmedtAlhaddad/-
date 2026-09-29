@@ -9,6 +9,7 @@ import {
   type OrderRecord,
 } from "@/components/admin/orders-manager";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { sanitizeTelegramFailure } from "@/lib/telegram-failure";
 import { sanitizeWhatsAppFailure } from "@/lib/whatsapp-failure";
 
 export const metadata: Metadata = {
@@ -83,8 +84,7 @@ export default async function Page() {
         .order("created_at", { ascending: false }),
       supabase
         .from("admin_notification_outbox")
-        .select("order_id, status, attempt_count, sent_at, last_error")
-        .eq("channel", "whatsapp")
+        .select("order_id, channel, status, attempt_count, sent_at, last_error")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -140,7 +140,9 @@ export default async function Page() {
               (notification) => ({
                 ...notification,
                 last_error: notification.last_error
-                  ? sanitizeWhatsAppFailure(notification.last_error)
+                  ? notification.channel === "telegram"
+                    ? sanitizeTelegramFailure(notification.last_error)
+                    : sanitizeWhatsAppFailure(notification.last_error)
                   : null,
               }),
             )
