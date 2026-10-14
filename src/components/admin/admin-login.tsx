@@ -60,7 +60,6 @@ export function AdminLogin({
     <main className={styles.page} dir="rtl">
       <section className={styles.card} aria-labelledby="admin-login-title">
         <div className={styles.brandBlock}>
-          <span className={styles.mark} aria-hidden="true">AL</span>
           <div>
             <span className={styles.eyebrow}>عالم اللياقة</span>
             <h1 id="admin-login-title">لوحة الإدارة</h1>
