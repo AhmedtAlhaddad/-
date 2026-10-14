@@ -55,6 +55,13 @@ type InitialProduct = {
   variants: InitialVariant[];
 };
 
+type ProductSaveResult = {
+  error?: unknown;
+  product?: {
+    id?: string;
+  };
+};
+
 export type ProductKind = "supplement" | "apparel" | "accessory";
 
 function productKindFromType(productType: string): ProductKind {
@@ -464,8 +471,7 @@ export function ProductForm({
           }),
         });
 
-      const result =
-        await response.json();
+      const result = (await response.json()) as ProductSaveResult;
 
       if (!response.ok) {
         setError(
