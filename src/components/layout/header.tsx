@@ -116,6 +116,10 @@ export function Header({
           <span>عالم <b>اللياقة</b></span>
         </Link>
 
+        <Link href="/" className="mobile-header-brand" aria-label="عالم اللياقة - الرئيسية">
+          عالم <b>اللياقة</b>
+        </Link>
+
         <nav className="desktop-nav" aria-label="التنقل الرئيسي">
           {groups.map((group) => (
             <div className="nav-group" key={group.id}>
