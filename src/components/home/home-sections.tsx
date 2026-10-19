@@ -20,7 +20,7 @@ export function Hero() {
   return (
     <section className="hero">
       <Image
-        src="/images/hero-athlete.jpg"
+        src="/images/hero-athlete-hq.png"
         alt="رياضي يستعد للتمرين"
         fill
         priority
@@ -132,9 +132,9 @@ export function CategorySection({
 }
 
 const goalImages = [
-  "/images/goal-muscle.jpg",
-  "/images/goal-energy.jpg",
-  "/images/goal-weight.jpg",
+  "/images/goal-muscle-hq.png",
+  "/images/goal-energy-man.png",
+  "/images/goal-weight-hq.png",
 ];
 
 const goals = trainingGoalDetails.map(

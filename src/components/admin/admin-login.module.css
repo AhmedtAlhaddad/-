@@ -24,18 +24,6 @@
   margin-bottom: 32px;
 }
 
-.mark {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid #00c56c;
-  color: #00c56c;
-  font-weight: 900;
-  transform: skew(-8deg);
-}
-
 .eyebrow {
   display: block;
   margin-bottom: 6px;

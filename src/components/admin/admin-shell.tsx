@@ -132,14 +132,6 @@ export function AdminShell({
           >
             <div
               className={
-                styles.brandMark
-              }
-            >
-              AL
-            </div>
-
-            <div
-              className={
                 styles.brandText
               }
             >

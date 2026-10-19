@@ -113,8 +113,11 @@ export function Header({
         </button>
 
         <Link href="/" className="brand" aria-label="عالم اللياقة - الرئيسية">
-          <span className="brand-mark">ع</span>
           <span>عالم <b>اللياقة</b></span>
+        </Link>
+
+        <Link href="/" className="mobile-header-brand" aria-label="عالم اللياقة - الرئيسية">
+          عالم <b>اللياقة</b>
         </Link>
 
         <nav className="desktop-nav" aria-label="التنقل الرئيسي">
